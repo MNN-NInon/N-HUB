@@ -166,6 +166,7 @@ end)
 -- ================= AUTO BUY (WARP) ================
 -- =================================================
 local BUY_DELAY = 1.2
+local HOLD_TIME = 0.5 -- ⏸️ ยืนนิ่งหลังวาป
 local LAST_BUY = 0
 
 local function GetPrice(obj)
@@ -197,7 +198,7 @@ task.spawn(function()
 				or p.Parent:FindFirstChildWhichIsA("BasePart")
 			if not part then continue end
 
-			-- 🔒 ซื้อเฉพาะของใกล้ฐาน
+			-- 🔒 ซื้อเฉพาะของในฐาน
 			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then
 				continue
 			end
@@ -205,12 +206,22 @@ task.spawn(function()
 			local price = GetPrice(p.Parent)
 			if not price or price < MinPrice then continue end
 
-			local old = HRP.CFrame
-			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-			RunService.Heartbeat:Wait()
+			local oldCF = HRP.CFrame
+
+			-- 🌀 วาปไปจุดซื้อ
+			HRP.CFrame = part.CFrame * CFrame.new(0, 0, -3)
+
+			-- ⏸️ ยืนนิ่งให้ดูธรรมชาติ
+			task.wait(HOLD_TIME)
+
+			-- 🛒 ซื้อ
 			fireproximityprompt(p)
-			RunService.Heartbeat:Wait()
-			HRP.CFrame = old
+
+			-- ⏸️ เผื่อดีเลย์นิดนึง
+			task.wait(0.1)
+
+			-- 🔙 วาปกลับ
+			HRP.CFrame = oldCF
 
 			LAST_BUY = tick()
 			break
