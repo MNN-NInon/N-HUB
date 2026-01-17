@@ -1,3 +1,18 @@
+-- ===== KEY SYSTEM =====
+local VALID_KEY = "NONON123"  -- 🔑 เปลี่ยนคีย์ตรงนี้
+
+if not _G.KEY then
+	warn("NO KEY")
+	return
+end
+
+if _G.KEY ~= VALID_KEY then
+	warn("INVALID KEY")
+	return
+end
+
+print("KEY OK - LOADING HUB")
+-- =================================================
 -- ===== SAFE START =====
 repeat task.wait() until game:IsLoaded()
 task.wait(1)
