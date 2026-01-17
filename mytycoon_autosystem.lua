@@ -1,8 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.2a (UNIVERSAL TYCOON)
--- Patch : Reduce Lag / Prompt Cache
+-- Version : V.1.3.2 (UNIVERSAL TYCOON)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -25,7 +24,7 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
--- ===== BASE POSITION =====
+-- ===== BASE POSITION (สำคัญมาก) =====
 local BASE_POSITION = HRP.Position
 
 -- ===== VARIABLES =====
@@ -34,7 +33,7 @@ local AutoBuy = false
 local UI_VISIBLE = true
 
 local COLLECT_DELAY = 60
-local BASE_RADIUS = 80
+local BASE_RADIUS = 80 -- ระยะบ้าน (ถ้าบ้านกว้าง ปรับเป็น 120 ได้)
 local MinPrice = tonumber(getgenv().MinPrice) or 250
 getgenv().MinPrice = MinPrice
 
@@ -164,41 +163,10 @@ task.spawn(function()
 end)
 
 -- =================================================
--- ============== PROMPT CACHE (PATCH) ==============
--- =================================================
-local CachedPrompts = {}
-local PROMPT_SCAN_DELAY = 2.5 -- สแกนใหม่ช้าลง ลดกระตุก
-
-task.spawn(function()
-	while task.wait(PROMPT_SCAN_DELAY) do
-		local t = {}
-
-		for _,p in pairs(workspace:GetDescendants()) do
-			if p:IsA("ProximityPrompt") then
-				if p.ActionText == "Buy!" or p.ActionText == "Purchase" then
-					local part =
-						p.Parent:IsA("BasePart") and p.Parent
-						or p.Parent:FindFirstChildWhichIsA("BasePart")
-
-					if part and (part.Position - BASE_POSITION).Magnitude <= BASE_RADIUS then
-						table.insert(t, {prompt = p, part = part})
-					end
-				end
-			end
-		end
-
-		CachedPrompts = t
-	end
-end)
-
--- =================================================
 -- ================= AUTO BUY (WARP) ================
 -- =================================================
 local BUY_DELAY = 1.2
 local LAST_BUY = 0
-
-local WARP_BEFORE_BUY_DELAY = 0.4
-local WARP_AFTER_BUY_DELAY  = 0.4
 
 local function GetPrice(obj)
 	local best
@@ -219,26 +187,29 @@ task.spawn(function()
 		if not AutoBuy then continue end
 		if tick() - LAST_BUY < BUY_DELAY then continue end
 
-		for _,data in pairs(CachedPrompts) do
+		for _,p in pairs(workspace:GetDescendants()) do
 			if not AutoBuy then break end
+			if not p:IsA("ProximityPrompt") then continue end
+			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then continue end
 
-			local p = data.prompt
-			local part = data.part
-			if not p or not part then continue end
+			local part =
+				p.Parent:IsA("BasePart") and p.Parent
+				or p.Parent:FindFirstChildWhichIsA("BasePart")
+			if not part then continue end
 
-			local price = GetPrice(p.Parent)
-			if not price or price < MinPrice then
+			-- 🔒 ซื้อเฉพาะของใกล้ฐาน
+			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then
 				continue
 			end
 
+			local price = GetPrice(p.Parent)
+			if not price or price < MinPrice then continue end
+
 			local old = HRP.CFrame
-
 			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-			task.wait(WARP_BEFORE_BUY_DELAY)
-
+			RunService.Heartbeat:Wait()
 			fireproximityprompt(p)
-
-			task.wait(WARP_AFTER_BUY_DELAY)
+			RunService.Heartbeat:Wait()
 			HRP.CFrame = old
 
 			LAST_BUY = tick()
