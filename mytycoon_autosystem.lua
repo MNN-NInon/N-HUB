@@ -1,6 +1,6 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
--- AutoCollect + AutoBuy (WARP FAST)
+-- AutoCollect + AutoBuy (WARP MODE)
 -- Version : V.1.3.2 (UNIVERSAL TYCOON)
 -- =====================================================
 
@@ -24,7 +24,7 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
--- ===== BASE POSITION =====
+-- ===== BASE POSITION (สำคัญมาก) =====
 local BASE_POSITION = HRP.Position
 
 -- ===== VARIABLES =====
@@ -33,7 +33,7 @@ local AutoBuy = false
 local UI_VISIBLE = true
 
 local COLLECT_DELAY = 60
-local BASE_RADIUS = 80
+local BASE_RADIUS = 80 -- ระยะบ้าน (ถ้าบ้านกว้าง ปรับเป็น 120 ได้)
 local MinPrice = tonumber(getgenv().MinPrice) or 250
 getgenv().MinPrice = MinPrice
 
@@ -152,7 +152,8 @@ task.spawn(function()
 			if not AutoCollect then break end
 			if (BASE_POSITION - z.Position).Magnitude <= BASE_RADIUS then
 				HRP.CFrame = CFrame.new(z.Position)
-				task.wait(0.05)
+				RunService.Heartbeat:Wait()
+				RunService.Heartbeat:Wait()
 			end
 		end
 
@@ -162,10 +163,9 @@ task.spawn(function()
 end)
 
 -- =================================================
--- ================= AUTO BUY (FAST) ================
+-- ================= AUTO BUY (WARP) ================
 -- =================================================
-local BUY_DELAY = 1.0
-local HOLD_AFTER_BUY = 1.0
+local BUY_DELAY = 1.2
 local LAST_BUY = 0
 
 local function GetPrice(obj)
@@ -183,7 +183,7 @@ local function GetPrice(obj)
 end
 
 task.spawn(function()
-	while task.wait(0.15) do
+	while task.wait(0.3) do
 		if not AutoBuy then continue end
 		if tick() - LAST_BUY < BUY_DELAY then continue end
 
@@ -197,6 +197,7 @@ task.spawn(function()
 				or p.Parent:FindFirstChildWhichIsA("BasePart")
 			if not part then continue end
 
+			-- 🔒 ซื้อเฉพาะของใกล้ฐาน
 			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then
 				continue
 			end
@@ -204,18 +205,12 @@ task.spawn(function()
 			local price = GetPrice(p.Parent)
 			if not price or price < MinPrice then continue end
 
-			local oldCF = HRP.CFrame
-
-			-- วาป + ซื้อทันที
+			local old = HRP.CFrame
 			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-			p.HoldDuration = 0
-			fireproximityprompt(p, 0)
-
-			-- ยืนคา
-			task.wait(HOLD_AFTER_BUY)
-
-			-- กลับฐาน
-			HRP.CFrame = oldCF
+			RunService.Heartbeat:Wait()
+			fireproximityprompt(p)
+			RunService.Heartbeat:Wait()
+			HRP.CFrame = old
 
 			LAST_BUY = tick()
 			break
