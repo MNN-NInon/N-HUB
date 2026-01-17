@@ -1,6 +1,6 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
--- AutoCollect + AutoBuy (WARP MODE)
+-- AutoCollect + AutoBuy (WARP FAST)
 -- Version : V.1.3.2 (UNIVERSAL TYCOON)
 -- =====================================================
 
@@ -24,7 +24,7 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
--- ===== BASE POSITION (สำคัญมาก) =====
+-- ===== BASE POSITION =====
 local BASE_POSITION = HRP.Position
 
 -- ===== VARIABLES =====
@@ -33,7 +33,7 @@ local AutoBuy = false
 local UI_VISIBLE = true
 
 local COLLECT_DELAY = 60
-local BASE_RADIUS = 80 -- ระยะบ้าน (ถ้าบ้านกว้าง ปรับเป็น 120 ได้)
+local BASE_RADIUS = 80
 local MinPrice = tonumber(getgenv().MinPrice) or 250
 getgenv().MinPrice = MinPrice
 
@@ -152,8 +152,7 @@ task.spawn(function()
 			if not AutoCollect then break end
 			if (BASE_POSITION - z.Position).Magnitude <= BASE_RADIUS then
 				HRP.CFrame = CFrame.new(z.Position)
-				RunService.Heartbeat:Wait()
-				RunService.Heartbeat:Wait()
+				task.wait(0.05)
 			end
 		end
 
@@ -163,7 +162,7 @@ task.spawn(function()
 end)
 
 -- =================================================
--- ================= AUTO BUY (WARP FAST) ===========
+-- ================= AUTO BUY (FAST) ================
 -- =================================================
 local BUY_DELAY = 1.0
 local HOLD_AFTER_BUY = 1.0
@@ -207,17 +206,15 @@ task.spawn(function()
 
 			local oldCF = HRP.CFrame
 
-			-- 🌀 วาป
+			-- วาป + ซื้อทันที
 			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-
-			-- ⚡ บังคับให้กดได้ทันที
 			p.HoldDuration = 0
 			fireproximityprompt(p, 0)
 
-			-- ⏸️ ยืนคา
+			-- ยืนคา
 			task.wait(HOLD_AFTER_BUY)
 
-			-- 🔙 กลับ
+			-- กลับฐาน
 			HRP.CFrame = oldCF
 
 			LAST_BUY = tick()
