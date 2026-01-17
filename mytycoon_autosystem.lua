@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.1 (STABLE | TYCOON SAFE)
+-- Version : V.1.3.2 (UNIVERSAL TYCOON)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -24,12 +24,16 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
+-- ===== BASE POSITION (สำคัญมาก) =====
+local BASE_POSITION = HRP.Position
+
 -- ===== VARIABLES =====
 local AutoCollect = true
 local AutoBuy = false
 local UI_VISIBLE = true
 
 local COLLECT_DELAY = 60
+local BASE_RADIUS = 80 -- ระยะบ้าน (ถ้าบ้านกว้าง ปรับเป็น 120 ได้)
 local MinPrice = tonumber(getgenv().MinPrice) or 250
 getgenv().MinPrice = MinPrice
 
@@ -44,7 +48,7 @@ gui.Name = "MainAutoUI"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromOffset(240,200)
+frame.Size = UDim2.fromOffset(230,190)
 frame.Position = UDim2.fromOffset(20,220)
 frame.BackgroundColor3 = Color3.fromRGB(15,15,15)
 frame.BackgroundTransparency = 0.15
@@ -52,7 +56,7 @@ frame.Active = true
 frame.Draggable = true
 
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,30)
+title.Size = UDim2.new(1,0,0,28)
 title.BackgroundTransparency = 1
 title.Text = "N-HUB | TYCOON"
 title.TextScaled = true
@@ -60,7 +64,7 @@ title.TextColor3 = Color3.new(1,1,1)
 
 local function makeBtn(txt,y)
 	local b = Instance.new("TextButton", frame)
-	b.Size = UDim2.fromOffset(200,28)
+	b.Size = UDim2.fromOffset(190,26)
 	b.Position = UDim2.fromOffset(20,y)
 	b.Text = txt
 	b.TextScaled = true
@@ -70,17 +74,17 @@ local function makeBtn(txt,y)
 end
 
 local collectBtn = makeBtn("AUTO COLLECT : ON",40)
-local buyBtn = makeBtn("AUTO BUY : OFF",75)
+local buyBtn = makeBtn("AUTO BUY : OFF",72)
 
 local priceBox = Instance.new("TextBox", frame)
-priceBox.Position = UDim2.fromOffset(20,110)
-priceBox.Size = UDim2.fromOffset(200,28)
+priceBox.Position = UDim2.fromOffset(20,104)
+priceBox.Size = UDim2.fromOffset(190,26)
 priceBox.Text = tostring(MinPrice)
 priceBox.TextScaled = true
 priceBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 priceBox.TextColor3 = Color3.new(1,1,1)
 
-local hideBtn = makeBtn("HIDE / SHOW (G)",150)
+local hideBtn = makeBtn("HIDE / SHOW (G)",140)
 
 local function updateUI()
 	collectBtn.Text = AutoCollect and "AUTO COLLECT : ON" or "AUTO COLLECT : OFF"
@@ -121,28 +125,6 @@ priceBox.FocusLost:Connect(function()
 end)
 
 -- =================================================
--- ================= TYCOON CHECK ==================
--- =================================================
-local function IsMyTycoon(obj)
-	local current = obj
-	while current and current ~= workspace do
-		if current:FindFirstChild("Owner") then
-			local o = current.Owner.Value
-			if o == LP or o == LP.UserId or o == LP.Name then
-				return true
-			end
-		end
-		if current:FindFirstChild("Player") then
-			if current.Player.Value == LP then
-				return true
-			end
-		end
-		current = current.Parent
-	end
-	return false
-end
-
--- =================================================
 -- ================= AUTO COLLECT ==================
 -- =================================================
 local function GetCollectZones()
@@ -168,7 +150,7 @@ task.spawn(function()
 
 		for _,z in pairs(GetCollectZones()) do
 			if not AutoCollect then break end
-			if (originalCF.Position - z.Position).Magnitude <= 120 then
+			if (BASE_POSITION - z.Position).Magnitude <= BASE_RADIUS then
 				HRP.CFrame = CFrame.new(z.Position)
 				RunService.Heartbeat:Wait()
 				RunService.Heartbeat:Wait()
@@ -209,12 +191,16 @@ task.spawn(function()
 			if not AutoBuy then break end
 			if not p:IsA("ProximityPrompt") then continue end
 			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then continue end
-			if not IsMyTycoon(p) then continue end
 
 			local part =
 				p.Parent:IsA("BasePart") and p.Parent
 				or p.Parent:FindFirstChildWhichIsA("BasePart")
 			if not part then continue end
+
+			-- 🔒 ซื้อเฉพาะของใกล้ฐาน
+			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then
+				continue
+			end
 
 			local price = GetPrice(p.Parent)
 			if not price or price < MinPrice then continue end
