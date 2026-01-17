@@ -163,57 +163,65 @@ task.spawn(function()
 end)
 
 -- =================================================
--- ================= AUTO BUY (WARP) ================
+-- ================== AUTO BUY =====================
 -- =================================================
-local BUY_DELAY = 1.2
-local LAST_BUY = 0
 
-local function GetPrice(obj)
-	local best
-	for _,v in pairs(obj:GetDescendants()) do
-		if v:IsA("TextLabel") or v:IsA("TextButton") then
-			local t = v.Text:gsub(",","")
-			local n = tonumber(t:match("%d+"))
-			if n and (not best or n > best) then
-				best = n
-			end
-		end
-	end
-	return best
+local BUY_HOLD_TIME = 0.6
+local BUY_RETRY_DELAY = 1.5
+local lastBuyAttempt = {}
+
+local function IsPromptGone(prompt)
+	return not prompt
+		or not prompt.Parent
+		or not prompt:IsDescendantOf(workspace)
+		or not prompt.Enabled
 end
 
 task.spawn(function()
-	while task.wait(0.3) do
+	while task.wait(0.4) do
 		if not AutoBuy then continue end
-		if tick() - LAST_BUY < BUY_DELAY then continue end
 
-		for _,p in pairs(workspace:GetDescendants()) do
-			if not AutoBuy then break end
-			if not p:IsA("ProximityPrompt") then continue end
-			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then continue end
+		for _,prompt in pairs(workspace:GetDescendants()) do
+			if not prompt:IsA("ProximityPrompt") then continue end
+			if prompt.ActionText ~= "Buy!" and prompt.ActionText ~= "Purchase" then continue end
 
 			local part =
-				p.Parent:IsA("BasePart") and p.Parent
-				or p.Parent:FindFirstChildWhichIsA("BasePart")
+				prompt.Parent:IsA("BasePart") and prompt.Parent
+				or prompt.Parent:FindFirstChildWhichIsA("BasePart")
+
 			if not part then continue end
 
-			-- 🔒 ซื้อเฉพาะของใกล้ฐาน
-			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then
-				continue
+			-- 🔹 เช็คราคา "ก่อน" วาป
+			local price = GetPrice(prompt.Parent)
+			if not price or price < MinPrice then
+				continue -- <<<<<< สำคัญมาก (ไม่วาป = ไม่กระตุก)
 			end
 
-			local price = GetPrice(p.Parent)
-			if not price or price < MinPrice then continue end
+			-- 🔹 กันซื้อรัวเกิน
+			local id = tostring(prompt)
+			if lastBuyAttempt[id] and tick() - lastBuyAttempt[id] < BUY_RETRY_DELAY then
+				continue
+			end
+			lastBuyAttempt[id] = tick()
 
-			local old = HRP.CFrame
-			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-			RunService.Heartbeat:Wait()
-			fireproximityprompt(p)
-			RunService.Heartbeat:Wait()
-			HRP.CFrame = old
+			-- 🔹 วาปไปซื้อ
+			local oldCF = HRP.CFrame
+			HRP.CFrame = part.CFrame + Vector3.new(0, 2, 0)
 
-			LAST_BUY = tick()
-			break
+			task.wait(BUY_HOLD_TIME) -- <<<<<< ยืนค้างให้ prompt register
+
+			pcall(function()
+				fireproximityprompt(prompt)
+			end)
+
+			task.wait(0.4)
+
+			-- 🔹 ถ้ายังไม่หาย = ยังไม่ติด → รอบหน้าลองใหม่
+			if IsPromptGone(prompt) then
+				-- ซื้อสำเร็จ
+			end
+
+			HRP.CFrame = oldCF
 		end
 	end
 end)
