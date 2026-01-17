@@ -216,6 +216,9 @@ end)
 -- =================================================
 -- ================== AUTO BUY =====================
 -- =================================================
+local BUY_DELAY = 1.2
+local LAST_BUY = 0
+
 local function GetPrice(obj)
 	local best
 	for _,v in pairs(obj:GetDescendants()) do
@@ -224,46 +227,38 @@ local function GetPrice(obj)
 			if not t or t == "" then continue end
 			t = t:gsub(",", "")
 			local n = tonumber(t:match("%d+"))
-			if n and (not best or n > best) then best = n end
+			if n and (not best or n > best) then
+				best = n
+			end
 		end
 	end
 	return best
 end
 
-local BUY_COOLDOWN = false
-local LAST_BUY = 0
-
 task.spawn(function()
 	while task.wait(0.25) do
-		if not AutoBuy then
-			BUY_COOLDOWN = false
-			continue
-		end
-
-		if BUY_COOLDOWN and tick() - LAST_BUY < 2 then
-			continue
-		end
+		if not AutoBuy then continue end
+		if tick() - LAST_BUY < BUY_DELAY then continue end
 
 		for _,p in pairs(workspace:GetDescendants()) do
 			if not AutoBuy then break end
+
 			if p:IsA("ProximityPrompt")
 			and (p.ActionText == "Buy!" or p.ActionText == "Purchase") then
 
-				local part = p.Parent:IsA("BasePart") and p.Parent
+				local part =
+					p.Parent:IsA("BasePart") and p.Parent
 					or p.Parent:FindFirstChildWhichIsA("BasePart")
+
 				if not part then continue end
 				if (HRP.Position - part.Position).Magnitude > 8 then continue end
 
 				local price = GetPrice(p.Parent)
 				if not price or price < MinPrice then continue end
 
-				local ok = pcall(function()
-					fireproximityprompt(p)
-				end)
-
+				fireproximityprompt(p)
 				LAST_BUY = tick()
-				BUY_COOLDOWN = not ok
-				task.wait(0.2)
+				break -- ⬅ สำคัญมาก กัน spam
 			end
 		end
 	end
