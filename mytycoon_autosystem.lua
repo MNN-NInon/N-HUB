@@ -1,12 +1,11 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.0 (STABLE)
+-- Version : V.1.3.1 (STABLE | TYCOON SAFE)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
 local VALID_KEY = "NONON123"
-
 if not _G.KEY or _G.KEY ~= VALID_KEY then
 	warn("❌ INVALID KEY")
 	return
@@ -45,8 +44,8 @@ gui.Name = "MainAutoUI"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromOffset(240, 200)
-frame.Position = UDim2.fromOffset(20, 220)
+frame.Size = UDim2.fromOffset(240,200)
+frame.Position = UDim2.fromOffset(20,220)
 frame.BackgroundColor3 = Color3.fromRGB(15,15,15)
 frame.BackgroundTransparency = 0.15
 frame.Active = true
@@ -122,6 +121,28 @@ priceBox.FocusLost:Connect(function()
 end)
 
 -- =================================================
+-- ================= TYCOON CHECK ==================
+-- =================================================
+local function IsMyTycoon(obj)
+	local current = obj
+	while current and current ~= workspace do
+		if current:FindFirstChild("Owner") then
+			local o = current.Owner.Value
+			if o == LP or o == LP.UserId or o == LP.Name then
+				return true
+			end
+		end
+		if current:FindFirstChild("Player") then
+			if current.Player.Value == LP then
+				return true
+			end
+		end
+		current = current.Parent
+	end
+	return false
+end
+
+-- =================================================
 -- ================= AUTO COLLECT ==================
 -- =================================================
 local function GetCollectZones()
@@ -186,27 +207,27 @@ task.spawn(function()
 
 		for _,p in pairs(workspace:GetDescendants()) do
 			if not AutoBuy then break end
-			if p:IsA("ProximityPrompt")
-			and (p.ActionText == "Buy!" or p.ActionText == "Purchase") then
+			if not p:IsA("ProximityPrompt") then continue end
+			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then continue end
+			if not IsMyTycoon(p) then continue end
 
-				local part =
-					p.Parent:IsA("BasePart") and p.Parent
-					or p.Parent:FindFirstChildWhichIsA("BasePart")
-				if not part then continue end
+			local part =
+				p.Parent:IsA("BasePart") and p.Parent
+				or p.Parent:FindFirstChildWhichIsA("BasePart")
+			if not part then continue end
 
-				local price = GetPrice(p.Parent)
-				if not price or price < MinPrice then continue end
+			local price = GetPrice(p.Parent)
+			if not price or price < MinPrice then continue end
 
-				local old = HRP.CFrame
-				HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-				RunService.Heartbeat:Wait()
-				fireproximityprompt(p)
-				RunService.Heartbeat:Wait()
-				HRP.CFrame = old
+			local old = HRP.CFrame
+			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
+			RunService.Heartbeat:Wait()
+			fireproximityprompt(p)
+			RunService.Heartbeat:Wait()
+			HRP.CFrame = old
 
-				LAST_BUY = tick()
-				break
-			end
+			LAST_BUY = tick()
+			break
 		end
 	end
 end)
