@@ -168,6 +168,9 @@ end)
 local BUY_DELAY = 1.2
 local LAST_BUY = 0
 
+local WARP_BEFORE_BUY_DELAY = 0.4
+local WARP_AFTER_BUY_DELAY  = 0.4
+
 local function GetPrice(obj)
 	local best
 	for _,v in pairs(obj:GetDescendants()) do
@@ -197,7 +200,6 @@ task.spawn(function()
 				or p.Parent:FindFirstChildWhichIsA("BasePart")
 			if not part then continue end
 
-			-- 🔒 ซื้อเฉพาะของใกล้ฐาน
 			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then
 				continue
 			end
@@ -206,10 +208,18 @@ task.spawn(function()
 			if not price or price < MinPrice then continue end
 
 			local old = HRP.CFrame
+
+			-- วาปไป
 			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-			RunService.Heartbeat:Wait()
+			task.wait(WARP_BEFORE_BUY_DELAY)
+
+			-- ซื้อ
 			fireproximityprompt(p)
-			RunService.Heartbeat:Wait()
+
+			-- หน่วงก่อนกลับ
+			task.wait(WARP_AFTER_BUY_DELAY)
+
+			-- วาปกลับ
 			HRP.CFrame = old
 
 			LAST_BUY = tick()
