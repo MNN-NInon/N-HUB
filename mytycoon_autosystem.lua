@@ -1,12 +1,12 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy
--- Version : V.1.2.2
--- Status  : STABLE (INVENTORY SAFE)
+-- Version : V.1.2.3
+-- Status  : STABLE (COLLECT RETURN FIX)
 -- UI      : DARK + TRANSPARENT
 -- =====================================================
 
-local SCRIPT_VERSION = "V.1.2.2"
+local SCRIPT_VERSION = "V.1.2.3"
 
 -- ===== SAVE CONFIG =====
 getgenv().N_HUB_CONFIG = getgenv().N_HUB_CONFIG or {
@@ -195,11 +195,20 @@ end
 task.spawn(function()
 	while task.wait(COLLECT_DELAY) do
 		if not AutoCollect then continue end
+
+		local originalCF = HRP.CFrame
+
 		for _,z in pairs(GetCollectZones()) do
+			if not AutoCollect then break end
 			if (HRP.Position - z.Position).Magnitude <= 120 then
 				HRP.CFrame = CFrame.new(z.Position)
 				RunService.Heartbeat:Wait()
+				RunService.Heartbeat:Wait()
 			end
+		end
+
+		if HRP and HRP.Parent then
+			HRP.CFrame = originalCF
 		end
 	end
 end)
@@ -237,7 +246,6 @@ task.spawn(function()
 
 		for _,p in pairs(workspace:GetDescendants()) do
 			if not AutoBuy then break end
-
 			if p:IsA("ProximityPrompt")
 			and (p.ActionText == "Buy!" or p.ActionText == "Purchase") then
 
