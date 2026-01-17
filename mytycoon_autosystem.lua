@@ -166,15 +166,15 @@ end)
 -- ================== AUTO BUY =====================
 -- =================================================
 
-local BUY_HOLD_TIME = 0.6
-local BUY_RETRY_DELAY = 1.5
+local BUY_HOLD_TIME = 0.6      -- เวลายืนค้างหน้าปุ่ม
+local BUY_RETRY_DELAY = 1.5    -- หน่วงก่อนซื้อซ้ำ
 local lastBuyAttempt = {}
 
 local function IsPromptGone(prompt)
 	return not prompt
 		or not prompt.Parent
 		or not prompt:IsDescendantOf(workspace)
-		or not prompt.Enabled
+		or prompt.Enabled == false
 end
 
 task.spawn(function()
@@ -191,37 +191,42 @@ task.spawn(function()
 
 			if not part then continue end
 
-			-- 🔹 เช็คราคา "ก่อน" วาป
+			-- ===== เช็คราคา "ก่อน" วาป =====
 			local price = GetPrice(prompt.Parent)
-			if not price or price < MinPrice then
-				continue -- <<<<<< สำคัญมาก (ไม่วาป = ไม่กระตุก)
-			end
 
-			-- 🔹 กันซื้อรัวเกิน
+			-- ถ้าอ่านราคาได้ และราคาต่ำกว่า MinPrice -> ข้าม
+			if price and price < MinPrice then
+				continue
+			end
+			-- ถ้า price == nil -> อนุญาตให้ลองซื้อ (Universal Tycoon)
+
+			-- ===== กันซื้อรัวเกิน =====
 			local id = tostring(prompt)
 			if lastBuyAttempt[id] and tick() - lastBuyAttempt[id] < BUY_RETRY_DELAY then
 				continue
 			end
 			lastBuyAttempt[id] = tick()
 
-			-- 🔹 วาปไปซื้อ
+			-- ===== วาปไปซื้อ =====
 			local oldCF = HRP.CFrame
 			HRP.CFrame = part.CFrame + Vector3.new(0, 2, 0)
 
-			task.wait(BUY_HOLD_TIME) -- <<<<<< ยืนค้างให้ prompt register
+			-- ยืนค้างให้ prompt register
+			task.wait(BUY_HOLD_TIME)
 
 			pcall(function()
 				fireproximityprompt(prompt)
 			end)
 
+			-- รอผล
 			task.wait(0.4)
 
-			-- 🔹 ถ้ายังไม่หาย = ยังไม่ติด → รอบหน้าลองใหม่
-			if IsPromptGone(prompt) then
-				-- ซื้อสำเร็จ
-			end
+			-- ถ้ายังไม่หาย = ยังไม่ติด (รอบหน้าจะลองใหม่)
+			-- ถ้าหาย = ถือว่าซื้อสำเร็จ
+			-- (ไม่ต้องทำอะไรเพิ่ม)
 
 			HRP.CFrame = oldCF
 		end
 	end
 end)
+
