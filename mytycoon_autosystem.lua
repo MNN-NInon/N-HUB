@@ -4,7 +4,18 @@
 
 -- ===== KEY =====
 local VALID_KEY = "NONON123"
-if _G.KEY ~= VALID_KEY then return end
+
+if not _G.KEY then
+	warn("[N-HUB] NO KEY")
+	return
+end
+
+if _G.KEY ~= VALID_KEY then
+	warn("[N-HUB] INVALID KEY :", _G.KEY)
+	return
+end
+
+print("[N-HUB] KEY OK")
 
 -- ===== SAFE START =====
 repeat task.wait() until game:IsLoaded()
