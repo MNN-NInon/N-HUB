@@ -163,10 +163,10 @@ task.spawn(function()
 end)
 
 -- =================================================
--- ================= AUTO BUY (WARP) ================
+-- ================= AUTO BUY (WARP FAST) ===========
 -- =================================================
-local BUY_DELAY = 1.2
-local HOLD_AFTER_BUY = 1.0 -- ⏸️ ยืนคาหลังซื้อ
+local BUY_DELAY = 1.0
+local HOLD_AFTER_BUY = 1.0
 local LAST_BUY = 0
 
 local function GetPrice(obj)
@@ -184,7 +184,7 @@ local function GetPrice(obj)
 end
 
 task.spawn(function()
-	while task.wait(0.25) do
+	while task.wait(0.15) do
 		if not AutoBuy then continue end
 		if tick() - LAST_BUY < BUY_DELAY then continue end
 
@@ -207,16 +207,17 @@ task.spawn(function()
 
 			local oldCF = HRP.CFrame
 
-			-- 🌀 วาปไปหน้ากล่อง
-			HRP.CFrame = part.CFrame * CFrame.new(0, 0, -3)
+			-- 🌀 วาป
+			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
 
-			-- 🛒 ซื้อทันที
-			fireproximityprompt(p)
+			-- ⚡ บังคับให้กดได้ทันที
+			p.HoldDuration = 0
+			fireproximityprompt(p, 0)
 
-			-- ⏸️ ยืนคาให้ดูเนียน
+			-- ⏸️ ยืนคา
 			task.wait(HOLD_AFTER_BUY)
 
-			-- 🔙 วาปกลับ
+			-- 🔙 กลับ
 			HRP.CFrame = oldCF
 
 			LAST_BUY = tick()
