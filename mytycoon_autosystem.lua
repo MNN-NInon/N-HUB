@@ -1,17 +1,9 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
--- AutoCollect + AutoBuy (WARP FAST)
+-- AutoCollect + AutoBuy + Anti-AFK
 -- Version : V.1.3.4b-r1
--- CORE : 1.3.4b
--- UI   : 1.3.4a (WARP STABILIZED)
+-- CORE 4b + UI 4a (WARP STABILIZED)
 -- =====================================================
-
--- ===== KEY SYSTEM =====
-local VALID_KEY = "NONON123"
-if not _G.KEY or _G.KEY ~= VALID_KEY then
-	warn("❌ INVALID KEY")
-	return
-end
 
 repeat task.wait() until game:IsLoaded()
 task.wait(1)
@@ -27,13 +19,6 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
--- ===== ANTI AFK (SAFE) =====
-LP.Idled:Connect(function()
-	VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-	task.wait(1)
-	VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-end)
-
 -- ===== BASE POSITION =====
 local BASE_POSITION = HRP.Position
 
@@ -44,6 +29,9 @@ local UI_VISIBLE = true
 
 local COLLECT_DELAY = 60
 local BASE_RADIUS = 80
+local BUY_DELAY = 1.2
+local LAST_BUY = 0
+
 local MinPrice = tonumber(getgenv().MinPrice) or 250
 getgenv().MinPrice = MinPrice
 
@@ -52,9 +40,9 @@ pcall(function()
 	PlayerGui.MainAutoUI:Destroy()
 end)
 
--- =================================================
--- ================= CLASSIC UI (4a) ===============
--- =================================================
+-- =====================================================
+-- ======================= UI ==========================
+-- =====================================================
 local gui = Instance.new("ScreenGui", PlayerGui)
 gui.Name = "MainAutoUI"
 gui.ResetOnSpawn = false
@@ -64,6 +52,7 @@ frame.Size = UDim2.fromOffset(230,190)
 frame.Position = UDim2.fromOffset(20,220)
 frame.BackgroundColor3 = Color3.fromRGB(15,15,15)
 frame.BackgroundTransparency = 0.15
+frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
 
@@ -71,7 +60,8 @@ local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,0,0,28)
 title.BackgroundTransparency = 1
 title.Text = "N-HUB | TYCOON"
-title.TextScaled = true
+title.Font = Enum.Font.GothamBold
+title.TextSize = 14
 title.TextColor3 = Color3.new(1,1,1)
 
 local function makeBtn(txt,y)
@@ -79,9 +69,11 @@ local function makeBtn(txt,y)
 	b.Size = UDim2.fromOffset(190,26)
 	b.Position = UDim2.fromOffset(20,y)
 	b.Text = txt
-	b.TextScaled = true
+	b.Font = Enum.Font.Gotham
+	b.TextSize = 14
 	b.BackgroundColor3 = Color3.fromRGB(40,40,40)
 	b.TextColor3 = Color3.new(1,1,1)
+	Instance.new("UICorner", b)
 	return b
 end
 
@@ -92,9 +84,11 @@ local priceBox = Instance.new("TextBox", frame)
 priceBox.Position = UDim2.fromOffset(20,104)
 priceBox.Size = UDim2.fromOffset(190,26)
 priceBox.Text = tostring(MinPrice)
-priceBox.TextScaled = true
+priceBox.Font = Enum.Font.Gotham
+priceBox.TextSize = 14
 priceBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 priceBox.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", priceBox)
 
 local hideBtn = makeBtn("HIDE / SHOW (G)",140)
 
@@ -136,9 +130,19 @@ priceBox.FocusLost:Connect(function()
 	priceBox.Text = tostring(MinPrice)
 end)
 
--- =================================================
--- ================= AUTO COLLECT ==================
--- =================================================
+-- =====================================================
+-- =================== ANTI-AFK ========================
+-- =====================================================
+task.spawn(function()
+	while task.wait(60) do
+		VirtualUser:CaptureController()
+		VirtualUser:ClickButton2(Vector2.new())
+	end
+end)
+
+-- =====================================================
+-- ================= AUTO COLLECT ======================
+-- =====================================================
 local function GetCollectZones()
 	local t = {}
 	for _,v in pairs(workspace:GetDescendants()) do
@@ -156,33 +160,33 @@ task.spawn(function()
 	while task.wait(COLLECT_DELAY) do
 		if not AutoCollect then continue end
 
-		local old = HRP.CFrame
+		local originalCF = HRP.CFrame
 		local wasBuy = AutoBuy
 		AutoBuy = false
 
 		for _,z in pairs(GetCollectZones()) do
+			if not AutoCollect then break end
 			if (BASE_POSITION - z.Position).Magnitude <= BASE_RADIUS then
 				HRP.CFrame = CFrame.new(z.Position)
-				task.wait(0.12)
+				RunService.Heartbeat:Wait()
+				RunService.Heartbeat:Wait()
 			end
 		end
 
-		HRP.CFrame = old
+		HRP.CFrame = originalCF
 		AutoBuy = wasBuy
 	end
 end)
 
--- =================================================
--- ================= AUTO BUY (4b) =================
--- =================================================
-local BUY_DELAY = 0.8
-local LAST_BUY = 0
-
+-- =====================================================
+-- ================= AUTO BUY (WARP) ===================
+-- =====================================================
 local function GetPrice(obj)
 	local best
 	for _,v in pairs(obj:GetDescendants()) do
 		if v:IsA("TextLabel") or v:IsA("TextButton") then
-			local n = tonumber(v.Text:gsub(",",""):match("%d+"))
+			local t = v.Text:gsub(",","")
+			local n = tonumber(t:match("%d+"))
 			if n and (not best or n > best) then
 				best = n
 			end
@@ -192,28 +196,32 @@ local function GetPrice(obj)
 end
 
 task.spawn(function()
-	while task.wait(0.25) do
+	while task.wait(0.3) do
 		if not AutoBuy then continue end
 		if tick() - LAST_BUY < BUY_DELAY then continue end
 
 		for _,p in pairs(workspace:GetDescendants()) do
+			if not AutoBuy then break end
 			if not p:IsA("ProximityPrompt") then continue end
 			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then continue end
 
-			local part = p.Parent:IsA("BasePart") and p.Parent
+			local part =
+				p.Parent:IsA("BasePart") and p.Parent
 				or p.Parent:FindFirstChildWhichIsA("BasePart")
 			if not part then continue end
 
-			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then continue end
+			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then
+				continue
+			end
 
 			local price = GetPrice(p.Parent)
 			if not price or price < MinPrice then continue end
 
 			local old = HRP.CFrame
 			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-			task.wait(0.18)
+			RunService.Heartbeat:Wait()
 			fireproximityprompt(p)
-			task.wait(0.15)
+			RunService.Heartbeat:Wait()
 			HRP.CFrame = old
 
 			LAST_BUY = tick()
