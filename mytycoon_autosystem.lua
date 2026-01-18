@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.3 (ANTI-AFK SAFE MODE)
+-- Version : V.1.3.4 (MINI UI MODE)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -28,7 +28,6 @@ local HRP = Char:WaitForChild("HumanoidRootPart")
 -- =================================================
 -- ================= ANTI AFK =====================
 -- =================================================
--- Safe + Popular Method (VirtualUser)
 LP.Idled:Connect(function()
 	VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 	task.wait(1)
@@ -42,6 +41,7 @@ local BASE_POSITION = HRP.Position
 local AutoCollect = true
 local AutoBuy = false
 local UI_VISIBLE = true
+local MINIMIZED = false
 
 local COLLECT_DELAY = 60
 local BASE_RADIUS = 80
@@ -66,12 +66,24 @@ frame.BackgroundTransparency = 0.15
 frame.Active = true
 frame.Draggable = true
 
+local FULL_SIZE = frame.Size
+local MINI_SIZE = UDim2.fromOffset(230,36)
+
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,28)
+title.Size = UDim2.new(1,-30,0,28)
+title.Position = UDim2.fromOffset(5,4)
 title.BackgroundTransparency = 1
 title.Text = "N-HUB | TYCOON"
 title.TextScaled = true
 title.TextColor3 = Color3.new(1,1,1)
+
+local minimizeBtn = Instance.new("TextButton", frame)
+minimizeBtn.Size = UDim2.fromOffset(26,26)
+minimizeBtn.Position = UDim2.fromOffset(198,4)
+minimizeBtn.Text = "-"
+minimizeBtn.TextScaled = true
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
+minimizeBtn.TextColor3 = Color3.new(1,1,1)
 
 local function makeBtn(txt,y)
 	local b = Instance.new("TextButton", frame)
@@ -103,6 +115,36 @@ local function updateUI()
 end
 updateUI()
 
+-- ===== MINI UI FUNCTION =====
+local function SetMini(state)
+	MINIMIZED = state
+
+	if state then
+		frame.Size = MINI_SIZE
+		title.Text = "N-HUB (MINI)"
+		minimizeBtn.Text = "+"
+
+		for _,v in pairs(frame:GetChildren()) do
+			if v ~= title and v ~= minimizeBtn then
+				v.Visible = false
+			end
+		end
+	else
+		frame.Size = FULL_SIZE
+		title.Text = "N-HUB | TYCOON"
+		minimizeBtn.Text = "-"
+
+		for _,v in pairs(frame:GetChildren()) do
+			v.Visible = true
+		end
+	end
+end
+
+minimizeBtn.MouseButton1Click:Connect(function()
+	SetMini(not MINIMIZED)
+end)
+
+-- ===== UI EVENTS =====
 collectBtn.MouseButton1Click:Connect(function()
 	AutoCollect = not AutoCollect
 	updateUI()
@@ -198,9 +240,7 @@ local function RefreshPrompts()
 	CachedPrompts = {}
 	for _,p in pairs(workspace:GetDescendants()) do
 		if p:IsA("ProximityPrompt") then
-			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then
-				continue
-			end
+			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then continue end
 
 			local part =
 				p.Parent:IsA("BasePart") and p.Parent
@@ -214,7 +254,6 @@ local function RefreshPrompts()
 	end
 end
 
--- รีเฟรช cache เป็นรอบ ๆ (ANTI-LAG)
 task.spawn(function()
 	while task.wait(8) do
 		if AutoBuy then
