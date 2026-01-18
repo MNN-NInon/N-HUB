@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP FAST)
--- Version : V.1.3.4d (CLASSIC UI + MINI FIX)
+-- Version : V.1.3.4d + MINI UI PATCH (OPTIONAL)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -25,6 +25,13 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
+-- ===== ANTI AFK (SAFE MODE) =====
+LP.Idled:Connect(function()
+	VirtualUser:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+	task.wait(1)
+	VirtualUser:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+end)
+
 -- ===== BASE POSITION =====
 local BASE_POSITION = HRP.Position
 
@@ -32,39 +39,25 @@ local BASE_POSITION = HRP.Position
 local AutoCollect = true
 local AutoBuy = false
 local UI_VISIBLE = true
-local MINI_MODE = false
 
 local COLLECT_DELAY = 60
 local BASE_RADIUS = 80
 local MinPrice = tonumber(getgenv().MinPrice) or 250
 getgenv().MinPrice = MinPrice
 
--- ===== WARP FAST CONFIG =====
-local WARP_IN_DELAY  = 0.35
-local WARP_OUT_DELAY = 0.25
-local LOCK_TIME      = 0.18
-local BUY_DELAY      = 0.9
-local LAST_BUY = 0
-
--- ===== ANTI AFK (SAFE MODE) =====
-LP.Idled:Connect(function()
-	VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-	task.wait(1)
-	VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-end)
-
 -- ===== CLEAR UI =====
 pcall(function()
 	PlayerGui.MainAutoUI:Destroy()
 end)
 
--- =====================================================
--- ======================= UI ==========================
--- =====================================================
+-- ===== UI ROOT =====
 local gui = Instance.new("ScreenGui", PlayerGui)
 gui.Name = "MainAutoUI"
 gui.ResetOnSpawn = false
 
+-- =================================================
+-- ================= MAIN UI =======================
+-- =================================================
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.fromOffset(230,190)
 frame.Position = UDim2.fromOffset(20,220)
@@ -102,7 +95,8 @@ priceBox.TextScaled = true
 priceBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 priceBox.TextColor3 = Color3.new(1,1,1)
 
-local miniBtn = makeBtn("MINI UI",136)
+local hideBtn = makeBtn("HIDE / SHOW (G)",136)
+local miniBtn = makeBtn("MINI UI",168)
 
 local function updateUI()
 	collectBtn.Text = AutoCollect and "AUTO COLLECT : ON" or "AUTO COLLECT : OFF"
@@ -120,40 +114,9 @@ buyBtn.MouseButton1Click:Connect(function()
 	updateUI()
 end)
 
-priceBox.FocusLost:Connect(function()
-	local n = tonumber(priceBox.Text)
-	if n then
-		MinPrice = n
-		getgenv().MinPrice = n
-	end
-	priceBox.Text = tostring(MinPrice)
-end)
-
--- ===== MINI UI FIXED =====
-miniBtn.MouseButton1Click:Connect(function()
-	MINI_MODE = not MINI_MODE
-
-	if MINI_MODE then
-		frame.Size = UDim2.fromOffset(150,50)
-
-		title.Visible = false
-		collectBtn.Visible = false
-		buyBtn.Visible = false
-		priceBox.Visible = false
-
-		miniBtn.Text = "EXPAND"
-		miniBtn.Position = UDim2.fromOffset(20,12)
-	else
-		frame.Size = UDim2.fromOffset(230,190)
-
-		title.Visible = true
-		collectBtn.Visible = true
-		buyBtn.Visible = true
-		priceBox.Visible = true
-
-		miniBtn.Text = "MINI UI"
-		miniBtn.Position = UDim2.fromOffset(20,136)
-	end
+hideBtn.MouseButton1Click:Connect(function()
+	UI_VISIBLE = not UI_VISIBLE
+	frame.Visible = UI_VISIBLE
 end)
 
 UIS.InputBegan:Connect(function(i,g)
@@ -164,9 +127,18 @@ UIS.InputBegan:Connect(function(i,g)
 	end
 end)
 
--- =====================================================
--- ================= AUTO COLLECT ======================
--- =====================================================
+priceBox.FocusLost:Connect(function()
+	local n = tonumber(priceBox.Text)
+	if n then
+		MinPrice = n
+		getgenv().MinPrice = n
+	end
+	priceBox.Text = tostring(MinPrice)
+end)
+
+-- =================================================
+-- ================= AUTO COLLECT ==================
+-- =================================================
 local function GetCollectZones()
 	local t = {}
 	for _,v in pairs(workspace:GetDescendants()) do
@@ -184,31 +156,35 @@ task.spawn(function()
 	while task.wait(COLLECT_DELAY) do
 		if not AutoCollect then continue end
 
-		local oldCF = HRP.CFrame
+		local originalCF = HRP.CFrame
 		local wasBuy = AutoBuy
 		AutoBuy = false
 
 		for _,z in pairs(GetCollectZones()) do
+			if not AutoCollect then break end
 			if (BASE_POSITION - z.Position).Magnitude <= BASE_RADIUS then
 				HRP.CFrame = CFrame.new(z.Position)
-				RunService.Heartbeat:Wait()
-				RunService.Heartbeat:Wait()
+				task.wait(0.12)
 			end
 		end
 
-		HRP.CFrame = oldCF
+		HRP.CFrame = originalCF
 		AutoBuy = wasBuy
 	end
 end)
 
--- =====================================================
--- ================= AUTO BUY ==========================
--- =====================================================
+-- =================================================
+-- ================= AUTO BUY ======================
+-- =================================================
+local BUY_DELAY = 0.8
+local LAST_BUY = 0
+
 local function GetPrice(obj)
 	local best
 	for _,v in pairs(obj:GetDescendants()) do
 		if v:IsA("TextLabel") or v:IsA("TextButton") then
-			local n = tonumber(v.Text:gsub(",",""):match("%d+"))
+			local t = v.Text:gsub(",","")
+			local n = tonumber(t:match("%d+"))
 			if n and (not best or n > best) then
 				best = n
 			end
@@ -223,35 +199,64 @@ task.spawn(function()
 		if tick() - LAST_BUY < BUY_DELAY then continue end
 
 		for _,p in pairs(workspace:GetDescendants()) do
+			if not AutoBuy then break end
 			if not p:IsA("ProximityPrompt") then continue end
 			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then continue end
 
-			local part =
-				p.Parent:IsA("BasePart") and p.Parent
+			local part = p.Parent:IsA("BasePart") and p.Parent
 				or p.Parent:FindFirstChildWhichIsA("BasePart")
 			if not part then continue end
 
-			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then continue end
+			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then
+				continue
+			end
 
 			local price = GetPrice(p.Parent)
 			if not price or price < MinPrice then continue end
 
 			local old = HRP.CFrame
 			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-			task.wait(WARP_IN_DELAY)
-
-			local t0 = tick()
-			while tick() - t0 < LOCK_TIME do
-				HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-				RunService.Heartbeat:Wait()
-			end
-
+			task.wait(0.18)
 			fireproximityprompt(p)
-			task.wait(WARP_OUT_DELAY)
+			task.wait(0.15)
 			HRP.CFrame = old
 
 			LAST_BUY = tick()
 			break
 		end
+	end
+end)
+
+-- =================================================
+-- ============ MINI UI PATCH (OPTIONAL) ============
+-- =================================================
+
+local MiniFrame = Instance.new("Frame", gui)
+MiniFrame.Size = UDim2.fromOffset(160,50)
+MiniFrame.Position = frame.Position
+MiniFrame.BackgroundColor3 = Color3.fromRGB(15,15,15)
+MiniFrame.BackgroundTransparency = 0.15
+MiniFrame.Active = true
+MiniFrame.Draggable = true
+MiniFrame.Visible = false
+
+local expand = Instance.new("TextLabel", MiniFrame)
+expand.Size = UDim2.fromScale(1,1)
+expand.BackgroundTransparency = 1
+expand.Text = "EXPAND"
+expand.TextScaled = true
+expand.TextColor3 = Color3.new(1,1,1)
+expand.Font = Enum.Font.GothamBold
+
+miniBtn.MouseButton1Click:Connect(function()
+	MiniFrame.Position = frame.Position
+	frame.Visible = false
+	MiniFrame.Visible = true
+end)
+
+MiniFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		MiniFrame.Visible = false
+		frame.Visible = true
 	end
 end)
