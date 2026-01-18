@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
--- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.4a (WARP STABILIZED + AUTO SAVE)
+-- AutoCollect + AutoBuy + FLY (WARP MODE)
+-- Version : V.1.3.5 (STABLE MERGED)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -26,7 +26,7 @@ local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
 -- =====================================================
--- =============== CONFIG SYSTEM =======================
+-- ================= CONFIG ============================
 -- =====================================================
 local CONFIG_FILE = "N-HUB_MyTycoonFarm_Config.json"
 
@@ -35,7 +35,8 @@ local Config = {
 	AutoBuy = false,
 	MinPrice = 250,
 	UI_VISIBLE = true,
-	MINIMIZED = false
+	MINIMIZED = false,
+	FLY = false
 }
 
 local function LoadConfig()
@@ -61,13 +62,12 @@ end
 
 LoadConfig()
 
--- ===== APPLY CONFIG =====
 local AutoCollect = Config.AutoCollect
-local AutoBuy     = Config.AutoBuy
-local UI_VISIBLE  = Config.UI_VISIBLE
-local MINIMIZED   = Config.MINIMIZED
-local MinPrice    = Config.MinPrice
-getgenv().MinPrice = MinPrice
+local AutoBuy = Config.AutoBuy
+local UI_VISIBLE = Config.UI_VISIBLE
+local MINIMIZED = Config.MINIMIZED
+local MinPrice = Config.MinPrice
+local FLYING = Config.FLY
 
 -- =====================================================
 -- ================= ANTI AFK ==========================
@@ -76,6 +76,9 @@ task.spawn(function()
 	while task.wait(30) do
 		if not LP.Character or not LP.Character:FindFirstChild("Humanoid") then continue end
 		local hum = LP.Character.Humanoid
+		local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
+		if not hrp then continue end
+
 		hum:Move(Vector3.new(0,0,-1), true)
 		task.wait(0.15)
 		hum:Move(Vector3.new(0,0,1), true)
@@ -83,14 +86,12 @@ task.spawn(function()
 	end
 end)
 
--- ===== BASE POSITION =====
+-- ===== BASE =====
 local BASE_POSITION = HRP.Position
-
--- ===== VARIABLES =====
-local COLLECT_DELAY = 60
 local BASE_RADIUS = 80
+local COLLECT_DELAY = 60
 
--- ===== WARP STABILIZER =====
+-- ===== WARP =====
 local WARP_IN_DELAY  = 0.35
 local WARP_OUT_DELAY = 0.25
 local LOCK_TIME      = 0.18
@@ -101,14 +102,14 @@ pcall(function()
 end)
 
 -- =====================================================
--- ===================== UI ============================
+-- ================= UI ================================
 -- =====================================================
 local gui = Instance.new("ScreenGui", PlayerGui)
 gui.Name = "MainAutoUI"
 gui.ResetOnSpawn = false
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromOffset(230,190)
+frame.Size = UDim2.fromOffset(230,240)
 frame.Position = UDim2.fromOffset(20,220)
 frame.BackgroundColor3 = Color3.fromRGB(15,15,15)
 frame.BackgroundTransparency = 0.15
@@ -123,7 +124,6 @@ local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1,-30,0,28)
 title.Position = UDim2.fromOffset(5,4)
 title.BackgroundTransparency = 1
-title.Text = "N-HUB | TYCOON"
 title.TextScaled = true
 title.TextColor3 = Color3.new(1,1,1)
 
@@ -151,16 +151,21 @@ local buyBtn = makeBtn("",72)
 local priceBox = Instance.new("TextBox", frame)
 priceBox.Position = UDim2.fromOffset(20,104)
 priceBox.Size = UDim2.fromOffset(190,26)
-priceBox.Text = tostring(MinPrice)
 priceBox.TextScaled = true
 priceBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 priceBox.TextColor3 = Color3.new(1,1,1)
 
-local hideBtn = makeBtn("HIDE / SHOW (G)",140)
+local flyBtn = makeBtn("",136)
+local hideBtn = makeBtn("HIDE / SHOW (G)",168)
 
+-- ===== UI LOGIC =====
 local function updateUI()
+	title.Text = MINIMIZED and "N-HUB (MINI)" or "N-HUB | TYCOON"
+	minimizeBtn.Text = MINIMIZED and "+" or "-"
 	collectBtn.Text = AutoCollect and "AUTO COLLECT : ON" or "AUTO COLLECT : OFF"
 	buyBtn.Text = AutoBuy and "AUTO BUY : ON" or "AUTO BUY : OFF"
+	flyBtn.Text = FLYING and "FLY : ON" or "FLY : OFF"
+	priceBox.Text = tostring(MinPrice)
 end
 
 local function SetMini(state)
@@ -168,29 +173,18 @@ local function SetMini(state)
 	Config.MINIMIZED = state
 	SaveConfig()
 
-	if state then
-		frame.Size = MINI_SIZE
-		title.Text = "N-HUB (MINI)"
-		minimizeBtn.Text = "+"
-		for _,v in pairs(frame:GetChildren()) do
-			if v ~= title and v ~= minimizeBtn then
-				v.Visible = false
-			end
-		end
-	else
-		frame.Size = FULL_SIZE
-		title.Text = "N-HUB | TYCOON"
-		minimizeBtn.Text = "-"
-		for _,v in pairs(frame:GetChildren()) do
-			v.Visible = true
+	frame.Size = state and MINI_SIZE or FULL_SIZE
+	for _,v in pairs(frame:GetChildren()) do
+		if v ~= title and v ~= minimizeBtn then
+			v.Visible = not state
 		end
 	end
+	updateUI()
 end
 
 updateUI()
 SetMini(MINIMIZED)
 
--- ===== UI EVENTS =====
 minimizeBtn.MouseButton1Click:Connect(function()
 	SetMini(not MINIMIZED)
 end)
@@ -198,15 +192,15 @@ end)
 collectBtn.MouseButton1Click:Connect(function()
 	AutoCollect = not AutoCollect
 	Config.AutoCollect = AutoCollect
-	updateUI()
 	SaveConfig()
+	updateUI()
 end)
 
 buyBtn.MouseButton1Click:Connect(function()
 	AutoBuy = not AutoBuy
 	Config.AutoBuy = AutoBuy
-	updateUI()
 	SaveConfig()
+	updateUI()
 end)
 
 hideBtn.MouseButton1Click:Connect(function()
@@ -230,99 +224,76 @@ priceBox.FocusLost:Connect(function()
 	if n then
 		MinPrice = n
 		Config.MinPrice = n
-		getgenv().MinPrice = n
 		SaveConfig()
 	end
-	priceBox.Text = tostring(MinPrice)
+	updateUI()
 end)
 
 -- =====================================================
--- ============ AUTO BUY (STABILIZED) ==================
+-- ================= FLY ===============================
 -- =====================================================
-local BUY_DELAY = 0.7
-local LAST_BUY = 0
-local CachedPrompts = {}
+local flySpeed = 70
+local BV, BG
+local ctrl = {f=0,b=0,l=0,r=0,u=0,d=0}
 
-local function GetPrice(obj)
-	local best
-	for _,v in pairs(obj:GetDescendants()) do
-		if v:IsA("TextLabel") or v:IsA("TextButton") then
-			local n = tonumber(v.Text:gsub(",",""):match("%d+"))
-			if n and (not best or n > best) then best = n end
+local function startFly()
+	if FLYING then return end
+	FLYING = true
+	Config.FLY = true
+	SaveConfig()
+
+	local cam = workspace.CurrentCamera
+
+	BV = Instance.new("BodyVelocity", HRP)
+	BV.MaxForce = Vector3.new(9e9,9e9,9e9)
+
+	BG = Instance.new("BodyGyro", HRP)
+	BG.MaxTorque = Vector3.new(9e9,9e9,9e9)
+
+	task.spawn(function()
+		while FLYING do
+			BV.Velocity =
+				cam.CFrame.LookVector * (ctrl.f - ctrl.b) +
+				cam.CFrame.RightVector * (ctrl.r - ctrl.l) +
+				Vector3.new(0,(ctrl.u - ctrl.d),0)
+			BV.Velocity *= flySpeed
+			BG.CFrame = cam.CFrame
+			RunService.RenderStepped:Wait()
 		end
-	end
-	return best
+	end)
+	updateUI()
 end
 
-local function RefreshPrompts()
-	CachedPrompts = {}
-	for _,p in pairs(workspace:GetDescendants()) do
-		if p:IsA("ProximityPrompt") and (p.ActionText=="Buy!" or p.ActionText=="Purchase") then
-			local part = p.Parent:IsA("BasePart") and p.Parent or p.Parent:FindFirstChildWhichIsA("BasePart")
-			if part and (part.Position-BASE_POSITION).Magnitude<=BASE_RADIUS then
-				table.insert(CachedPrompts,p)
-			end
-		end
-	end
+local function stopFly()
+	FLYING = false
+	Config.FLY = false
+	SaveConfig()
+	if BV then BV:Destroy() BV=nil end
+	if BG then BG:Destroy() BG=nil end
+	updateUI()
 end
 
-task.spawn(function()
-	while task.wait(8) do
-		if AutoBuy then RefreshPrompts() end
-	end
+flyBtn.MouseButton1Click:Connect(function()
+	if FLYING then stopFly() else startFly() end
 end)
 
-task.spawn(function()
-	while task.wait(0.4) do
-		if not AutoBuy or tick()-LAST_BUY<BUY_DELAY then continue end
-		for _,p in pairs(CachedPrompts) do
-			local part = p.Parent and (p.Parent:IsA("BasePart") and p.Parent or p.Parent:FindFirstChildWhichIsA("BasePart"))
-			if not part then continue end
-
-			local price = GetPrice(p.Parent)
-			if not price or price < MinPrice then continue end
-
-			local old = HRP.CFrame
-			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-			task.wait(WARP_IN_DELAY)
-
-			local t0 = tick()
-			while tick()-t0 < LOCK_TIME do
-				HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-				RunService.Heartbeat:Wait()
-			end
-
-			fireproximityprompt(p)
-			task.wait(WARP_OUT_DELAY)
-			HRP.CFrame = old
-
-			LAST_BUY = tick()
-			break
-		end
-	end
+UIS.InputBegan:Connect(function(i,g)
+	if g then return end
+	if i.KeyCode == Enum.KeyCode.W then ctrl.f=1 end
+	if i.KeyCode == Enum.KeyCode.S then ctrl.b=1 end
+	if i.KeyCode == Enum.KeyCode.A then ctrl.l=1 end
+	if i.KeyCode == Enum.KeyCode.D then ctrl.r=1 end
+	if i.KeyCode == Enum.KeyCode.Space then ctrl.u=1 end
+	if i.KeyCode == Enum.KeyCode.LeftControl then ctrl.d=1 end
 end)
 
--- =====================================================
--- ============== AUTO COLLECT =========================
--- =====================================================
-task.spawn(function()
-	while task.wait(COLLECT_DELAY) do
-		if not AutoCollect then continue end
-		for _,v in pairs(workspace:GetDescendants()) do
-			if v:IsA("BasePart") then
-				local name = v.Name:lower()
-				if name:find("collect") or name:find("money") or name:find("cash") then
-					if (v.Position - BASE_POSITION).Magnitude <= BASE_RADIUS then
-						local old = HRP.CFrame
-						HRP.CFrame = v.CFrame + Vector3.new(0,3,0)
-						task.wait(0.15)
-						firetouchinterest(HRP, v, 0)
-						firetouchinterest(HRP, v, 1)
-						task.wait(0.15)
-						HRP.CFrame = old
-					end
-				end
-			end
-		end
-	end
+UIS.InputEnded:Connect(function(i)
+	if i.KeyCode == Enum.KeyCode.W then ctrl.f=0 end
+	if i.KeyCode == Enum.KeyCode.S then ctrl.b=0 end
+	if i.KeyCode == Enum.KeyCode.A then ctrl.l=0 end
+	if i.KeyCode == Enum.KeyCode.D then ctrl.r=0 end
+	if i.KeyCode == Enum.KeyCode.Space then ctrl.u=0 end
+	if i.KeyCode == Enum.KeyCode.LeftControl then ctrl.d=0 end
 end)
+
+if FLYING then startFly() end
