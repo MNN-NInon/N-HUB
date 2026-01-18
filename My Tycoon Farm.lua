@@ -1,8 +1,8 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.4b-r2
--- CORE 4b + Anti-AFK (LUCa Stabilized)
+-- Version : V.1.3.4b-r3
+-- CORE 4b + Anti-AFK + WORKING AutoCollect
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -28,18 +28,15 @@ local HRP = Char:WaitForChild("HumanoidRootPart")
 
 -- =================================================
 -- ================= ANTI AFK ======================
--- ========== LUCa CORE (STABILIZED) ===============
 -- =================================================
 LP.Idled:Connect(function()
 	VirtualUser:CaptureController()
 	VirtualUser:ClickButton2(Vector2.new(0,0))
 end)
 
--- กันเกมที่จับ AFK จาก movement
 task.spawn(function()
 	while task.wait(55) do
-		local char = LP.Character
-		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
 		if hum then
 			hum:Move(Vector3.new(0,0,0))
 		end
@@ -55,7 +52,6 @@ local AutoBuy = false
 local UI_VISIBLE = true
 local MINIMIZED = false
 
-local COLLECT_DELAY = 60
 local BASE_RADIUS = 80
 local MinPrice = tonumber(getgenv().MinPrice) or 250
 getgenv().MinPrice = MinPrice
@@ -190,6 +186,30 @@ priceBox.FocusLost:Connect(function()
 end)
 
 -- =================================================
+-- ============== AUTO COLLECT (WORKING) ===========
+-- =================================================
+task.spawn(function()
+	while task.wait(1) do
+		if not AutoCollect then continue end
+
+		for _,p in pairs(workspace:GetDescendants()) do
+			if p:IsA("ProximityPrompt") then
+				local t = (p.ActionText or ""):lower()
+				if t:find("collect") or t:find("claim") or t:find("get") then
+					local part = p.Parent:IsA("BasePart") and p.Parent
+						or p.Parent:FindFirstChildWhichIsA("BasePart")
+
+					if part and (part.Position - HRP.Position).Magnitude <= 15 then
+						fireproximityprompt(p)
+						task.wait(0.25)
+					end
+				end
+			end
+		end
+	end
+end)
+
+-- =================================================
 -- ============ AUTO BUY (STABILIZED) ===============
 -- =================================================
 local BUY_DELAY = 0.7
@@ -211,8 +231,10 @@ local function RefreshPrompts()
 	CachedPrompts = {}
 	for _,p in pairs(workspace:GetDescendants()) do
 		if p:IsA("ProximityPrompt") and (p.ActionText=="Buy!" or p.ActionText=="Purchase") then
-			local part = p.Parent:IsA("BasePart") and p.Parent or p.Parent:FindFirstChildWhichIsA("BasePart")
-			if part and (part.Position-BASE_POSITION).Magnitude<=BASE_RADIUS then
+			local part = p.Parent:IsA("BasePart") and p.Parent
+				or p.Parent:FindFirstChildWhichIsA("BasePart")
+
+			if part and (part.Position-BASE_POSITION).Magnitude <= BASE_RADIUS then
 				table.insert(CachedPrompts,p)
 			end
 		end
@@ -221,16 +243,20 @@ end
 
 task.spawn(function()
 	while task.wait(8) do
-		if AutoBuy then RefreshPrompts() end
+		if AutoBuy then
+			BASE_POSITION = HRP.Position
+			RefreshPrompts()
+		end
 	end
 end)
 
 task.spawn(function()
 	while task.wait(0.4) do
-		if not AutoBuy or tick()-LAST_BUY<BUY_DELAY then continue end
+		if not AutoBuy or tick()-LAST_BUY < BUY_DELAY then continue end
 
 		for _,p in pairs(CachedPrompts) do
-			local part = p.Parent and (p.Parent:IsA("BasePart") and p.Parent or p.Parent:FindFirstChildWhichIsA("BasePart"))
+			local part = p.Parent and (p.Parent:IsA("BasePart") and p.Parent
+				or p.Parent:FindFirstChildWhichIsA("BasePart"))
 			if not part then continue end
 
 			local price = GetPrice(p.Parent)
