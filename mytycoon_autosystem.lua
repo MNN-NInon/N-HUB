@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP FAST)
--- Version : V.1.3.4d (CLASSIC UI)
+-- Version : V.1.3.4d (CLASSIC UI + MINI FIX)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -129,20 +129,30 @@ priceBox.FocusLost:Connect(function()
 	priceBox.Text = tostring(MinPrice)
 end)
 
+-- ===== MINI UI FIXED =====
 miniBtn.MouseButton1Click:Connect(function()
 	MINI_MODE = not MINI_MODE
+
 	if MINI_MODE then
-		frame.Size = UDim2.fromOffset(150,60)
+		frame.Size = UDim2.fromOffset(150,50)
+
+		title.Visible = false
 		collectBtn.Visible = false
 		buyBtn.Visible = false
 		priceBox.Visible = false
+
 		miniBtn.Text = "EXPAND"
+		miniBtn.Position = UDim2.fromOffset(20,12)
 	else
 		frame.Size = UDim2.fromOffset(230,190)
+
+		title.Visible = true
 		collectBtn.Visible = true
 		buyBtn.Visible = true
 		priceBox.Visible = true
+
 		miniBtn.Text = "MINI UI"
+		miniBtn.Position = UDim2.fromOffset(20,136)
 	end
 end)
 
