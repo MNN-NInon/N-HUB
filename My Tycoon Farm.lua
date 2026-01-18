@@ -296,6 +296,91 @@ updateUI()
 
 -- =====================================================
 -- ============ AUTO BUY (STABILIZED) ==================
--- (โค้ดเดิม ไม่แตะ)
 -- =====================================================
--- << ส่วน Auto Buy + Auto Collect ของมึงอยู่ครบตามไฟล์ต้นฉบับ >>
+local BUY_DELAY = 0.7
+local LAST_BUY = 0
+local CachedPrompts = {}
+
+local function GetPrice(obj)
+	local best
+	for _,v in pairs(obj:GetDescendants()) do
+		if v:IsA("TextLabel") or v:IsA("TextButton") then
+			local n = tonumber(v.Text:gsub(",",""):match("%d+"))
+			if n and (not best or n > best) then best = n end
+		end
+	end
+	return best
+end
+
+local function RefreshPrompts()
+	CachedPrompts = {}
+	for _,p in pairs(workspace:GetDescendants()) do
+		if p:IsA("ProximityPrompt") and (p.ActionText=="Buy!" or p.ActionText=="Purchase") then
+			local part = p.Parent:IsA("BasePart") and p.Parent or p.Parent:FindFirstChildWhichIsA("BasePart")
+			if part and (part.Position-BASE_POSITION).Magnitude<=BASE_RADIUS then
+				table.insert(CachedPrompts,p)
+			end
+		end
+	end
+end
+
+task.spawn(function()
+	while task.wait(8) do
+		if AutoBuy then RefreshPrompts() end
+	end
+end)
+
+task.spawn(function()
+	while task.wait(0.4) do
+		if not AutoBuy or tick()-LAST_BUY<BUY_DELAY then continue end
+		for _,p in pairs(CachedPrompts) do
+			local part = p.Parent and (p.Parent:IsA("BasePart") and p.Parent or p.Parent:FindFirstChildWhichIsA("BasePart"))
+			if not part then continue end
+
+			local price = GetPrice(p.Parent)
+			if not price or price < MinPrice then continue end
+
+			local old = HRP.CFrame
+			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
+			task.wait(WARP_IN_DELAY)
+
+			local t0 = tick()
+			while tick()-t0 < LOCK_TIME do
+				HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
+				RunService.Heartbeat:Wait()
+			end
+
+			fireproximityprompt(p)
+			task.wait(WARP_OUT_DELAY)
+			HRP.CFrame = old
+
+			LAST_BUY = tick()
+			break
+		end
+	end
+end)
+
+-- =====================================================
+-- ============== AUTO COLLECT =========================
+-- =====================================================
+task.spawn(function()
+	while task.wait(COLLECT_DELAY) do
+		if not AutoCollect then continue end
+		for _,v in pairs(workspace:GetDescendants()) do
+			if v:IsA("BasePart") then
+				local name = v.Name:lower()
+				if name:find("collect") or name:find("money") or name:find("cash") then
+					if (v.Position - BASE_POSITION).Magnitude <= BASE_RADIUS then
+						local old = HRP.CFrame
+						HRP.CFrame = v.CFrame + Vector3.new(0,3,0)
+						task.wait(0.15)
+						firetouchinterest(HRP, v, 0)
+						firetouchinterest(HRP, v, 1)
+						task.wait(0.15)
+						HRP.CFrame = old
+					end
+				end
+			end
+		end
+	end
+end)
