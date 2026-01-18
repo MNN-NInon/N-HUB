@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.4a (WARP STABILIZED)
+-- Version : V.1.3.4a (WARP STABILIZED + AUTO SAVE)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -18,28 +18,67 @@ task.wait(1)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
-local VirtualUser = game:GetService("VirtualUser")
+local HttpService = game:GetService("HttpService")
 
 local LP = Players.LocalPlayer
 local PlayerGui = LP:WaitForChild("PlayerGui")
 local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
--- ================== REAL ANTI AFK ==================
+-- =====================================================
+-- =============== CONFIG SYSTEM =======================
+-- =====================================================
+local CONFIG_FILE = "N-HUB_MyTycoonFarm_Config.json"
+
+local Config = {
+	AutoCollect = true,
+	AutoBuy = false,
+	MinPrice = 250,
+	UI_VISIBLE = true,
+	MINIMIZED = false
+}
+
+local function LoadConfig()
+	if isfile(CONFIG_FILE) then
+		local ok, data = pcall(function()
+			return HttpService:JSONDecode(readfile(CONFIG_FILE))
+		end)
+		if ok and type(data) == "table" then
+			for k,v in pairs(Config) do
+				if data[k] ~= nil then
+					Config[k] = data[k]
+				end
+			end
+		end
+	end
+end
+
+local function SaveConfig()
+	pcall(function()
+		writefile(CONFIG_FILE, HttpService:JSONEncode(Config))
+	end)
+end
+
+LoadConfig()
+
+-- ===== APPLY CONFIG =====
+local AutoCollect = Config.AutoCollect
+local AutoBuy     = Config.AutoBuy
+local UI_VISIBLE  = Config.UI_VISIBLE
+local MINIMIZED   = Config.MINIMIZED
+local MinPrice    = Config.MinPrice
+getgenv().MinPrice = MinPrice
+
+-- =====================================================
+-- ================= ANTI AFK ==========================
+-- =====================================================
 task.spawn(function()
 	while task.wait(30) do
 		if not LP.Character or not LP.Character:FindFirstChild("Humanoid") then continue end
-
 		local hum = LP.Character.Humanoid
-		local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
-		if not hrp then continue end
-
-		-- ขยับจริงเล็กน้อย
 		hum:Move(Vector3.new(0,0,-1), true)
 		task.wait(0.15)
 		hum:Move(Vector3.new(0,0,1), true)
-
-		-- เปลี่ยน State กัน AFK เชิงลึก
 		hum:ChangeState(Enum.HumanoidStateType.Jumping)
 	end
 end)
@@ -48,15 +87,8 @@ end)
 local BASE_POSITION = HRP.Position
 
 -- ===== VARIABLES =====
-local AutoCollect = true
-local AutoBuy = false
-local UI_VISIBLE = true
-local MINIMIZED = false
-
 local COLLECT_DELAY = 60
 local BASE_RADIUS = 80
-local MinPrice = tonumber(getgenv().MinPrice) or 250
-getgenv().MinPrice = MinPrice
 
 -- ===== WARP STABILIZER =====
 local WARP_IN_DELAY  = 0.35
@@ -68,7 +100,9 @@ pcall(function()
 	PlayerGui.MainAutoUI:Destroy()
 end)
 
--- ===== UI =====
+-- =====================================================
+-- ===================== UI ============================
+-- =====================================================
 local gui = Instance.new("ScreenGui", PlayerGui)
 gui.Name = "MainAutoUI"
 gui.ResetOnSpawn = false
@@ -80,6 +114,7 @@ frame.BackgroundColor3 = Color3.fromRGB(15,15,15)
 frame.BackgroundTransparency = 0.15
 frame.Active = true
 frame.Draggable = true
+frame.Visible = UI_VISIBLE
 
 local FULL_SIZE = frame.Size
 local MINI_SIZE = UDim2.fromOffset(230,36)
@@ -95,7 +130,6 @@ title.TextColor3 = Color3.new(1,1,1)
 local minimizeBtn = Instance.new("TextButton", frame)
 minimizeBtn.Size = UDim2.fromOffset(26,26)
 minimizeBtn.Position = UDim2.fromOffset(198,4)
-minimizeBtn.Text = "-"
 minimizeBtn.TextScaled = true
 minimizeBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
 minimizeBtn.TextColor3 = Color3.new(1,1,1)
@@ -111,8 +145,8 @@ local function makeBtn(txt,y)
 	return b
 end
 
-local collectBtn = makeBtn("AUTO COLLECT : ON",40)
-local buyBtn = makeBtn("AUTO BUY : OFF",72)
+local collectBtn = makeBtn("",40)
+local buyBtn = makeBtn("",72)
 
 local priceBox = Instance.new("TextBox", frame)
 priceBox.Position = UDim2.fromOffset(20,104)
@@ -128,11 +162,12 @@ local function updateUI()
 	collectBtn.Text = AutoCollect and "AUTO COLLECT : ON" or "AUTO COLLECT : OFF"
 	buyBtn.Text = AutoBuy and "AUTO BUY : ON" or "AUTO BUY : OFF"
 end
-updateUI()
 
--- ===== MINI UI =====
 local function SetMini(state)
 	MINIMIZED = state
+	Config.MINIMIZED = state
+	SaveConfig()
+
 	if state then
 		frame.Size = MINI_SIZE
 		title.Text = "N-HUB (MINI)"
@@ -152,29 +187,41 @@ local function SetMini(state)
 	end
 end
 
+updateUI()
+SetMini(MINIMIZED)
+
+-- ===== UI EVENTS =====
 minimizeBtn.MouseButton1Click:Connect(function()
 	SetMini(not MINIMIZED)
 end)
 
 collectBtn.MouseButton1Click:Connect(function()
 	AutoCollect = not AutoCollect
+	Config.AutoCollect = AutoCollect
 	updateUI()
+	SaveConfig()
 end)
 
 buyBtn.MouseButton1Click:Connect(function()
 	AutoBuy = not AutoBuy
+	Config.AutoBuy = AutoBuy
 	updateUI()
+	SaveConfig()
 end)
 
 hideBtn.MouseButton1Click:Connect(function()
 	UI_VISIBLE = not UI_VISIBLE
+	Config.UI_VISIBLE = UI_VISIBLE
 	frame.Visible = UI_VISIBLE
+	SaveConfig()
 end)
 
 UIS.InputBegan:Connect(function(i,g)
 	if not g and i.KeyCode == Enum.KeyCode.G then
 		UI_VISIBLE = not UI_VISIBLE
+		Config.UI_VISIBLE = UI_VISIBLE
 		frame.Visible = UI_VISIBLE
+		SaveConfig()
 	end
 end)
 
@@ -182,14 +229,16 @@ priceBox.FocusLost:Connect(function()
 	local n = tonumber(priceBox.Text)
 	if n then
 		MinPrice = n
+		Config.MinPrice = n
 		getgenv().MinPrice = n
+		SaveConfig()
 	end
 	priceBox.Text = tostring(MinPrice)
 end)
 
--- =================================================
--- ============ AUTO BUY (STABILIZED) ===============
--- =================================================
+-- =====================================================
+-- ============ AUTO BUY (STABILIZED) ==================
+-- =====================================================
 local BUY_DELAY = 0.7
 local LAST_BUY = 0
 local CachedPrompts = {}
@@ -226,7 +275,6 @@ end)
 task.spawn(function()
 	while task.wait(0.4) do
 		if not AutoBuy or tick()-LAST_BUY<BUY_DELAY then continue end
-
 		for _,p in pairs(CachedPrompts) do
 			local part = p.Parent and (p.Parent:IsA("BasePart") and p.Parent or p.Parent:FindFirstChildWhichIsA("BasePart"))
 			if not part then continue end
@@ -236,7 +284,6 @@ task.spawn(function()
 
 			local old = HRP.CFrame
 			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-
 			task.wait(WARP_IN_DELAY)
 
 			local t0 = tick()
@@ -255,35 +302,22 @@ task.spawn(function()
 	end
 end)
 
--- =================================================
--- ===== AUTO COLLECT : MY TYCOON FARM ==============
--- =================================================
-
+-- =====================================================
+-- ============== AUTO COLLECT =========================
+-- =====================================================
 task.spawn(function()
 	while task.wait(COLLECT_DELAY) do
 		if not AutoCollect then continue end
-
 		for _,v in pairs(workspace:GetDescendants()) do
 			if v:IsA("BasePart") then
 				local name = v.Name:lower()
-
-				-- ชื่อที่เกมนี้ใช้บ่อย
-				if name:find("collect")
-				or name:find("collector")
-				or name:find("money")
-				or name:find("cash")
-				or name:find("drop") then
-
+				if name:find("collect") or name:find("money") or name:find("cash") then
 					if (v.Position - BASE_POSITION).Magnitude <= BASE_RADIUS then
 						local old = HRP.CFrame
 						HRP.CFrame = v.CFrame + Vector3.new(0,3,0)
-
 						task.wait(0.15)
-
-						-- เหยียบให้ TouchInterest ทำงาน
 						firetouchinterest(HRP, v, 0)
 						firetouchinterest(HRP, v, 1)
-
 						task.wait(0.15)
 						HRP.CFrame = old
 					end
