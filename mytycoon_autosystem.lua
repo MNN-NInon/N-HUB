@@ -1,7 +1,9 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP FAST)
--- Version : V.1.3.4e (COLLAPSE UI MODE)
+-- Version : V.1.3.4b-r1
+-- CORE : 1.3.4b
+-- UI   : 1.3.4a (WARP STABILIZED)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -25,7 +27,7 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
--- ===== ANTI AFK (SAFE MODE) =====
+-- ===== ANTI AFK (SAFE) =====
 LP.Idled:Connect(function()
 	VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 	task.wait(1)
@@ -39,7 +41,6 @@ local BASE_POSITION = HRP.Position
 local AutoCollect = true
 local AutoBuy = false
 local UI_VISIBLE = true
-local COLLAPSED = false
 
 local COLLECT_DELAY = 60
 local BASE_RADIUS = 80
@@ -51,14 +52,13 @@ pcall(function()
 	PlayerGui.MainAutoUI:Destroy()
 end)
 
--- ===== UI ROOT =====
+-- =================================================
+-- ================= CLASSIC UI (4a) ===============
+-- =================================================
 local gui = Instance.new("ScreenGui", PlayerGui)
 gui.Name = "MainAutoUI"
 gui.ResetOnSpawn = false
 
--- =================================================
--- ================= MAIN UI =======================
--- =================================================
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.fromOffset(230,190)
 frame.Position = UDim2.fromOffset(20,220)
@@ -67,29 +67,13 @@ frame.BackgroundTransparency = 0.15
 frame.Active = true
 frame.Draggable = true
 
--- ===== TITLE BAR =====
-local titleBar = Instance.new("Frame", frame)
-titleBar.Size = UDim2.new(1,0,0,28)
-titleBar.BackgroundTransparency = 1
-
-local title = Instance.new("TextLabel", titleBar)
-title.Size = UDim2.new(1,-30,1,0)
-title.Position = UDim2.new(0,5,0,0)
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,28)
 title.BackgroundTransparency = 1
 title.Text = "N-HUB | TYCOON"
 title.TextScaled = true
 title.TextColor3 = Color3.new(1,1,1)
-title.TextXAlignment = Enum.TextXAlignment.Left
 
-local toggleBtn = Instance.new("TextButton", titleBar)
-toggleBtn.Size = UDim2.fromOffset(24,24)
-toggleBtn.Position = UDim2.new(1,-28,0,2)
-toggleBtn.Text = "-"
-toggleBtn.TextScaled = true
-toggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
-toggleBtn.TextColor3 = Color3.new(1,1,1)
-
--- ===== BUTTON FACTORY =====
 local function makeBtn(txt,y)
 	local b = Instance.new("TextButton", frame)
 	b.Size = UDim2.fromOffset(190,26)
@@ -112,9 +96,8 @@ priceBox.TextScaled = true
 priceBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 priceBox.TextColor3 = Color3.new(1,1,1)
 
-local hideBtn = makeBtn("HIDE / SHOW (G)",136)
+local hideBtn = makeBtn("HIDE / SHOW (G)",140)
 
--- ===== UI UPDATE =====
 local function updateUI()
 	collectBtn.Text = AutoCollect and "AUTO COLLECT : ON" or "AUTO COLLECT : OFF"
 	buyBtn.Text = AutoBuy and "AUTO BUY : ON" or "AUTO BUY : OFF"
@@ -153,26 +136,6 @@ priceBox.FocusLost:Connect(function()
 	priceBox.Text = tostring(MinPrice)
 end)
 
--- ===== COLLAPSE FUNCTION =====
-local function setCollapsed(state)
-	COLLAPSED = state
-	toggleBtn.Text = state and "+" or "-"
-
-	for _,v in pairs(frame:GetChildren()) do
-		if v ~= titleBar then
-			v.Visible = not state
-		end
-	end
-
-	frame.Size = state
-		and UDim2.fromOffset(230,36)
-		or UDim2.fromOffset(230,190)
-end
-
-toggleBtn.MouseButton1Click:Connect(function()
-	setCollapsed(not COLLAPSED)
-end)
-
 -- =================================================
 -- ================= AUTO COLLECT ==================
 -- =================================================
@@ -193,25 +156,24 @@ task.spawn(function()
 	while task.wait(COLLECT_DELAY) do
 		if not AutoCollect then continue end
 
-		local originalCF = HRP.CFrame
+		local old = HRP.CFrame
 		local wasBuy = AutoBuy
 		AutoBuy = false
 
 		for _,z in pairs(GetCollectZones()) do
-			if not AutoCollect then break end
 			if (BASE_POSITION - z.Position).Magnitude <= BASE_RADIUS then
 				HRP.CFrame = CFrame.new(z.Position)
 				task.wait(0.12)
 			end
 		end
 
-		HRP.CFrame = originalCF
+		HRP.CFrame = old
 		AutoBuy = wasBuy
 	end
 end)
 
 -- =================================================
--- ================= AUTO BUY ======================
+-- ================= AUTO BUY (4b) =================
 -- =================================================
 local BUY_DELAY = 0.8
 local LAST_BUY = 0
@@ -220,8 +182,7 @@ local function GetPrice(obj)
 	local best
 	for _,v in pairs(obj:GetDescendants()) do
 		if v:IsA("TextLabel") or v:IsA("TextButton") then
-			local t = v.Text:gsub(",","")
-			local n = tonumber(t:match("%d+"))
+			local n = tonumber(v.Text:gsub(",",""):match("%d+"))
 			if n and (not best or n > best) then
 				best = n
 			end
@@ -236,7 +197,6 @@ task.spawn(function()
 		if tick() - LAST_BUY < BUY_DELAY then continue end
 
 		for _,p in pairs(workspace:GetDescendants()) do
-			if not AutoBuy then break end
 			if not p:IsA("ProximityPrompt") then continue end
 			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then continue end
 
@@ -244,9 +204,7 @@ task.spawn(function()
 				or p.Parent:FindFirstChildWhichIsA("BasePart")
 			if not part then continue end
 
-			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then
-				continue
-			end
+			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then continue end
 
 			local price = GetPrice(p.Parent)
 			if not price or price < MinPrice then continue end
