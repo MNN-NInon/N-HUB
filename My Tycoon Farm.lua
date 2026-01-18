@@ -246,7 +246,7 @@ task.spawn(function()
 end)
 
 -- =================================================
--- ============ AUTO COLLECT (FIX) =================
+-- ===== AUTO COLLECT : MY TYCOON FARM ==============
 -- =================================================
 
 task.spawn(function()
@@ -254,16 +254,28 @@ task.spawn(function()
 		if not AutoCollect then continue end
 
 		for _,v in pairs(workspace:GetDescendants()) do
-			if v:IsA("ProximityPrompt") then
-				local t = v.ActionText:lower()
-				if t:find("collect") or t:find("claim") or t:find("harvest") then
-					local part = v.Parent:IsA("BasePart") and v.Parent
-						or v.Parent:FindFirstChildWhichIsA("BasePart")
+			if v:IsA("BasePart") then
+				local name = v.Name:lower()
 
-					if part and (part.Position - HRP.Position).Magnitude <= BASE_RADIUS then
-						pcall(function()
-							fireproximityprompt(v)
-						end)
+				-- ชื่อที่เกมนี้ใช้บ่อย
+				if name:find("collect")
+				or name:find("collector")
+				or name:find("money")
+				or name:find("cash")
+				or name:find("drop") then
+
+					if (v.Position - BASE_POSITION).Magnitude <= BASE_RADIUS then
+						local old = HRP.CFrame
+						HRP.CFrame = v.CFrame + Vector3.new(0,3,0)
+
+						task.wait(0.15)
+
+						-- เหยียบให้ TouchInterest ทำงาน
+						firetouchinterest(HRP, v, 0)
+						firetouchinterest(HRP, v, 1)
+
+						task.wait(0.15)
+						HRP.CFrame = old
 					end
 				end
 			end
