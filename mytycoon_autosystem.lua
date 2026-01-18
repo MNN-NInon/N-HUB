@@ -49,9 +49,9 @@ local MinPrice = tonumber(getgenv().MinPrice) or 250
 getgenv().MinPrice = MinPrice
 
 -- ===== WARP STABILIZER =====
-local WARP_IN_DELAY  = 0.6
-local WARP_OUT_DELAY = 0.4
-local LOCK_TIME      = 0.3
+local WARP_IN_DELAY  = 0.35
+local WARP_OUT_DELAY = 0.2
+local LOCK_TIME      = 0.15
 
 -- ===== CLEAR UI =====
 pcall(function()
