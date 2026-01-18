@@ -72,17 +72,15 @@ local FlyEnabled  = Config.Fly
 
 getgenv().MinPrice = MinPrice
 
--- =====================================================
--- ================= ANTI AFK ==========================
--- =====================================================
+-- ================== ANTI AFK (MOUSE CLICK) ==================
+local VirtualUser = game:GetService("VirtualUser")
+
 task.spawn(function()
-	while task.wait(30) do
-		if not LP.Character or not LP.Character:FindFirstChild("Humanoid") then continue end
-		local hum = LP.Character.Humanoid
-		hum:Move(Vector3.new(0,0,-1), true)
-		task.wait(0.15)
-		hum:Move(Vector3.new(0,0,1), true)
-		hum:ChangeState(Enum.HumanoidStateType.Jumping)
+	while task.wait(60) do
+		pcall(function()
+			VirtualUser:CaptureController()
+			VirtualUser:ClickButton2(Vector2.new(0,0))
+		end)
 	end
 end)
 
