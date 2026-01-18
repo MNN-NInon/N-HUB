@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.4a (WARP STABILIZED)
+-- Version : V.1.3.4a-r1 (WARP FAST FIXED)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -26,7 +26,7 @@ local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
 -- =================================================
--- ================= ANTI AFK =====================
+-- ================= ANTI AFK ======================
 -- =================================================
 LP.Idled:Connect(function()
 	VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
@@ -43,12 +43,11 @@ local AutoBuy = false
 local UI_VISIBLE = true
 local MINIMIZED = false
 
-local COLLECT_DELAY = 60
 local BASE_RADIUS = 80
 local MinPrice = tonumber(getgenv().MinPrice) or 250
 getgenv().MinPrice = MinPrice
 
--- ===== WARP STABILIZER =====
+-- ===== WARP STABILIZER (FAST) =====
 local WARP_IN_DELAY  = 0.35
 local WARP_OUT_DELAY = 0.2
 local LOCK_TIME      = 0.15
@@ -58,7 +57,9 @@ pcall(function()
 	PlayerGui.MainAutoUI:Destroy()
 end)
 
--- ===== UI =====
+-- =================================================
+-- ===================== UI ========================
+-- =================================================
 local gui = Instance.new("ScreenGui", PlayerGui)
 gui.Name = "MainAutoUI"
 gui.ResetOnSpawn = false
@@ -178,7 +179,49 @@ priceBox.FocusLost:Connect(function()
 end)
 
 -- =================================================
--- ============ AUTO BUY (STABILIZED) ===============
+-- ============ AUTO COLLECT (WARP) =================
+-- =================================================
+task.spawn(function()
+	while task.wait(0.5) do
+		if not AutoCollect then continue end
+
+		for _,p in pairs(workspace:GetDescendants()) do
+			if not AutoCollect then break end
+			if not p:IsA("ProximityPrompt") then continue end
+
+			if p.ActionText ~= "Collect"
+			and p.ActionText ~= "Harvest"
+			and p.ActionText ~= "Claim" then
+				continue
+			end
+
+			local part =
+				p.Parent:IsA("BasePart") and p.Parent
+				or p.Parent:FindFirstChildWhichIsA("BasePart")
+
+			if not part then continue end
+			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then continue end
+
+			local old = HRP.CFrame
+			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
+
+			task.wait(WARP_IN_DELAY)
+
+			local t0 = tick()
+			while tick() - t0 < LOCK_TIME do
+				HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
+				RunService.Heartbeat:Wait()
+			end
+
+			fireproximityprompt(p)
+			task.wait(WARP_OUT_DELAY)
+			HRP.CFrame = old
+		end
+	end
+end)
+
+-- =================================================
+-- ============ AUTO BUY (STABILIZED) ==============
 -- =================================================
 local BUY_DELAY = 1.2
 local LAST_BUY = 0
