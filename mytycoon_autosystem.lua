@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP FAST)
--- Version : V.1.3.4d + MINI UI PATCH (OPTIONAL)
+-- Version : V.1.3.4e (COLLAPSE UI MODE)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -27,9 +27,9 @@ local HRP = Char:WaitForChild("HumanoidRootPart")
 
 -- ===== ANTI AFK (SAFE MODE) =====
 LP.Idled:Connect(function()
-	VirtualUser:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+	VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 	task.wait(1)
-	VirtualUser:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+	VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
 -- ===== BASE POSITION =====
@@ -39,6 +39,7 @@ local BASE_POSITION = HRP.Position
 local AutoCollect = true
 local AutoBuy = false
 local UI_VISIBLE = true
+local COLLAPSED = false
 
 local COLLECT_DELAY = 60
 local BASE_RADIUS = 80
@@ -66,13 +67,29 @@ frame.BackgroundTransparency = 0.15
 frame.Active = true
 frame.Draggable = true
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,28)
+-- ===== TITLE BAR =====
+local titleBar = Instance.new("Frame", frame)
+titleBar.Size = UDim2.new(1,0,0,28)
+titleBar.BackgroundTransparency = 1
+
+local title = Instance.new("TextLabel", titleBar)
+title.Size = UDim2.new(1,-30,1,0)
+title.Position = UDim2.new(0,5,0,0)
 title.BackgroundTransparency = 1
 title.Text = "N-HUB | TYCOON"
 title.TextScaled = true
 title.TextColor3 = Color3.new(1,1,1)
+title.TextXAlignment = Enum.TextXAlignment.Left
 
+local toggleBtn = Instance.new("TextButton", titleBar)
+toggleBtn.Size = UDim2.fromOffset(24,24)
+toggleBtn.Position = UDim2.new(1,-28,0,2)
+toggleBtn.Text = "-"
+toggleBtn.TextScaled = true
+toggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+toggleBtn.TextColor3 = Color3.new(1,1,1)
+
+-- ===== BUTTON FACTORY =====
 local function makeBtn(txt,y)
 	local b = Instance.new("TextButton", frame)
 	b.Size = UDim2.fromOffset(190,26)
@@ -96,8 +113,8 @@ priceBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
 priceBox.TextColor3 = Color3.new(1,1,1)
 
 local hideBtn = makeBtn("HIDE / SHOW (G)",136)
-local miniBtn = makeBtn("MINI UI",168)
 
+-- ===== UI UPDATE =====
 local function updateUI()
 	collectBtn.Text = AutoCollect and "AUTO COLLECT : ON" or "AUTO COLLECT : OFF"
 	buyBtn.Text = AutoBuy and "AUTO BUY : ON" or "AUTO BUY : OFF"
@@ -134,6 +151,26 @@ priceBox.FocusLost:Connect(function()
 		getgenv().MinPrice = n
 	end
 	priceBox.Text = tostring(MinPrice)
+end)
+
+-- ===== COLLAPSE FUNCTION =====
+local function setCollapsed(state)
+	COLLAPSED = state
+	toggleBtn.Text = state and "+" or "-"
+
+	for _,v in pairs(frame:GetChildren()) do
+		if v ~= titleBar then
+			v.Visible = not state
+		end
+	end
+
+	frame.Size = state
+		and UDim2.fromOffset(230,36)
+		or UDim2.fromOffset(230,190)
+end
+
+toggleBtn.MouseButton1Click:Connect(function()
+	setCollapsed(not COLLAPSED)
 end)
 
 -- =================================================
@@ -224,39 +261,5 @@ task.spawn(function()
 			LAST_BUY = tick()
 			break
 		end
-	end
-end)
-
--- =================================================
--- ============ MINI UI PATCH (OPTIONAL) ============
--- =================================================
-
-local MiniFrame = Instance.new("Frame", gui)
-MiniFrame.Size = UDim2.fromOffset(160,50)
-MiniFrame.Position = frame.Position
-MiniFrame.BackgroundColor3 = Color3.fromRGB(15,15,15)
-MiniFrame.BackgroundTransparency = 0.15
-MiniFrame.Active = true
-MiniFrame.Draggable = true
-MiniFrame.Visible = false
-
-local expand = Instance.new("TextLabel", MiniFrame)
-expand.Size = UDim2.fromScale(1,1)
-expand.BackgroundTransparency = 1
-expand.Text = "EXPAND"
-expand.TextScaled = true
-expand.TextColor3 = Color3.new(1,1,1)
-expand.Font = Enum.Font.GothamBold
-
-miniBtn.MouseButton1Click:Connect(function()
-	MiniFrame.Position = frame.Position
-	frame.Visible = false
-	MiniFrame.Visible = true
-end)
-
-MiniFrame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		MiniFrame.Visible = false
-		frame.Visible = true
 	end
 end)
