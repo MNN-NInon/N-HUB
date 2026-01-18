@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.2a (ANTI-LAG AUTO BUY)
+-- Version : V.1.3.3 (ANTI-AFK SAFE MODE)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -18,11 +18,22 @@ task.wait(1)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
 
 local LP = Players.LocalPlayer
 local PlayerGui = LP:WaitForChild("PlayerGui")
 local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
+
+-- =================================================
+-- ================= ANTI AFK =====================
+-- =================================================
+-- Safe + Popular Method (VirtualUser)
+LP.Idled:Connect(function()
+	VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+	task.wait(1)
+	VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+end)
 
 -- ===== BASE POSITION =====
 local BASE_POSITION = HRP.Position
@@ -203,7 +214,7 @@ local function RefreshPrompts()
 	end
 end
 
--- รีเฟรช cache เป็นรอบ ๆ (กันกระตุก)
+-- รีเฟรช cache เป็นรอบ ๆ (ANTI-LAG)
 task.spawn(function()
 	while task.wait(8) do
 		if AutoBuy then
