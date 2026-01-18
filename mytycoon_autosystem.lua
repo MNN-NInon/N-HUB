@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.2 (UNIVERSAL TYCOON)
+-- Version : V.1.3.2a (ANTI-LAG AUTO BUY)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -24,7 +24,7 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
--- ===== BASE POSITION (สำคัญมาก) =====
+-- ===== BASE POSITION =====
 local BASE_POSITION = HRP.Position
 
 -- ===== VARIABLES =====
@@ -33,7 +33,7 @@ local AutoBuy = false
 local UI_VISIBLE = true
 
 local COLLECT_DELAY = 60
-local BASE_RADIUS = 80 -- ระยะบ้าน (ถ้าบ้านกว้าง ปรับเป็น 120 ได้)
+local BASE_RADIUS = 80
 local MinPrice = tonumber(getgenv().MinPrice) or 250
 getgenv().MinPrice = MinPrice
 
@@ -163,10 +163,11 @@ task.spawn(function()
 end)
 
 -- =================================================
--- ================= AUTO BUY (WARP) ================
+-- ============ AUTO BUY (CACHE MODE) ===============
 -- =================================================
 local BUY_DELAY = 1.2
 local LAST_BUY = 0
+local CachedPrompts = {}
 
 local function GetPrice(obj)
 	local best
@@ -182,25 +183,48 @@ local function GetPrice(obj)
 	return best
 end
 
-task.spawn(function()
-	while task.wait(0.3) do
-		if not AutoBuy then continue end
-		if tick() - LAST_BUY < BUY_DELAY then continue end
-
-		for _,p in pairs(workspace:GetDescendants()) do
-			if not AutoBuy then break end
-			if not p:IsA("ProximityPrompt") then continue end
-			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then continue end
+local function RefreshPrompts()
+	CachedPrompts = {}
+	for _,p in pairs(workspace:GetDescendants()) do
+		if p:IsA("ProximityPrompt") then
+			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then
+				continue
+			end
 
 			local part =
 				p.Parent:IsA("BasePart") and p.Parent
 				or p.Parent:FindFirstChildWhichIsA("BasePart")
 			if not part then continue end
 
-			-- 🔒 ซื้อเฉพาะของใกล้ฐาน
-			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then
-				continue
+			if (part.Position - BASE_POSITION).Magnitude <= BASE_RADIUS then
+				table.insert(CachedPrompts, p)
 			end
+		end
+	end
+end
+
+-- รีเฟรช cache เป็นรอบ ๆ (กันกระตุก)
+task.spawn(function()
+	while task.wait(8) do
+		if AutoBuy then
+			RefreshPrompts()
+		end
+	end
+end)
+
+task.spawn(function()
+	while task.wait(0.4) do
+		if not AutoBuy then continue end
+		if tick() - LAST_BUY < BUY_DELAY then continue end
+
+		for _,p in pairs(CachedPrompts) do
+			if not AutoBuy then break end
+			if not p.Parent then continue end
+
+			local part =
+				p.Parent:IsA("BasePart") and p.Parent
+				or p.Parent:FindFirstChildWhichIsA("BasePart")
+			if not part then continue end
 
 			local price = GetPrice(p.Parent)
 			if not price or price < MinPrice then continue end
