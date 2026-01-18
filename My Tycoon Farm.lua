@@ -1,7 +1,8 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.4a (WARP STABILIZED)
+-- Version : V.1.3.4b-r2
+-- CORE 4b + Anti-AFK (LUCa Stabilized)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -26,12 +27,23 @@ local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
 -- =================================================
--- ================= ANTI AFK =====================
+-- ================= ANTI AFK ======================
+-- ========== LUCa CORE (STABILIZED) ===============
 -- =================================================
 LP.Idled:Connect(function()
-	VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-	task.wait(1)
-	VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+	VirtualUser:CaptureController()
+	VirtualUser:ClickButton2(Vector2.new(0,0))
+end)
+
+-- กันเกมที่จับ AFK จาก movement
+task.spawn(function()
+	while task.wait(55) do
+		local char = LP.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum:Move(Vector3.new(0,0,0))
+		end
+	end
 end)
 
 -- ===== BASE POSITION =====
