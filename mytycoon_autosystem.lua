@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
 -- AutoCollect + AutoBuy (WARP MODE)
--- Version : V.1.3.4a-r1 (WARP FAST FIXED)
+-- Version : V.1.3.4 (MINI UI MODE)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -26,7 +26,7 @@ local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
 -- =================================================
--- ================= ANTI AFK ======================
+-- ================= ANTI AFK =====================
 -- =================================================
 LP.Idled:Connect(function()
 	VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
@@ -43,23 +43,17 @@ local AutoBuy = false
 local UI_VISIBLE = true
 local MINIMIZED = false
 
+local COLLECT_DELAY = 60
 local BASE_RADIUS = 80
 local MinPrice = tonumber(getgenv().MinPrice) or 250
 getgenv().MinPrice = MinPrice
-
--- ===== WARP STABILIZER (FAST) =====
-local WARP_IN_DELAY  = 0.35
-local WARP_OUT_DELAY = 0.2
-local LOCK_TIME      = 0.15
 
 -- ===== CLEAR UI =====
 pcall(function()
 	PlayerGui.MainAutoUI:Destroy()
 end)
 
--- =================================================
--- ===================== UI ========================
--- =================================================
+-- ===== UI =====
 local gui = Instance.new("ScreenGui", PlayerGui)
 gui.Name = "MainAutoUI"
 gui.ResetOnSpawn = false
@@ -121,13 +115,15 @@ local function updateUI()
 end
 updateUI()
 
--- ===== MINI UI =====
+-- ===== MINI UI FUNCTION =====
 local function SetMini(state)
 	MINIMIZED = state
+
 	if state then
 		frame.Size = MINI_SIZE
 		title.Text = "N-HUB (MINI)"
 		minimizeBtn.Text = "+"
+
 		for _,v in pairs(frame:GetChildren()) do
 			if v ~= title and v ~= minimizeBtn then
 				v.Visible = false
@@ -137,6 +133,7 @@ local function SetMini(state)
 		frame.Size = FULL_SIZE
 		title.Text = "N-HUB | TYCOON"
 		minimizeBtn.Text = "-"
+
 		for _,v in pairs(frame:GetChildren()) do
 			v.Visible = true
 		end
@@ -147,6 +144,7 @@ minimizeBtn.MouseButton1Click:Connect(function()
 	SetMini(not MINIMIZED)
 end)
 
+-- ===== UI EVENTS =====
 collectBtn.MouseButton1Click:Connect(function()
 	AutoCollect = not AutoCollect
 	updateUI()
@@ -163,7 +161,8 @@ hideBtn.MouseButton1Click:Connect(function()
 end)
 
 UIS.InputBegan:Connect(function(i,g)
-	if not g and i.KeyCode == Enum.KeyCode.G then
+	if g then return end
+	if i.KeyCode == Enum.KeyCode.G then
 		UI_VISIBLE = not UI_VISIBLE
 		frame.Visible = UI_VISIBLE
 	end
@@ -179,49 +178,45 @@ priceBox.FocusLost:Connect(function()
 end)
 
 -- =================================================
--- ============ AUTO COLLECT (WARP) =================
+-- ================= AUTO COLLECT ==================
 -- =================================================
+local function GetCollectZones()
+	local t = {}
+	for _,v in pairs(workspace:GetDescendants()) do
+		if v:IsA("BasePart") then
+			local n = v.Name:lower()
+			if n:find("collect") or n:find("zone") or n:find("trigger") then
+				table.insert(t,v)
+			end
+		end
+	end
+	return t
+end
+
 task.spawn(function()
-	while task.wait(0.5) do
+	while task.wait(COLLECT_DELAY) do
 		if not AutoCollect then continue end
 
-		for _,p in pairs(workspace:GetDescendants()) do
+		local originalCF = HRP.CFrame
+		local wasBuy = AutoBuy
+		AutoBuy = false
+
+		for _,z in pairs(GetCollectZones()) do
 			if not AutoCollect then break end
-			if not p:IsA("ProximityPrompt") then continue end
-
-			if p.ActionText ~= "Collect"
-			and p.ActionText ~= "Harvest"
-			and p.ActionText ~= "Claim" then
-				continue
-			end
-
-			local part =
-				p.Parent:IsA("BasePart") and p.Parent
-				or p.Parent:FindFirstChildWhichIsA("BasePart")
-
-			if not part then continue end
-			if (part.Position - BASE_POSITION).Magnitude > BASE_RADIUS then continue end
-
-			local old = HRP.CFrame
-			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-
-			task.wait(WARP_IN_DELAY)
-
-			local t0 = tick()
-			while tick() - t0 < LOCK_TIME do
-				HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
+			if (BASE_POSITION - z.Position).Magnitude <= BASE_RADIUS then
+				HRP.CFrame = CFrame.new(z.Position)
+				RunService.Heartbeat:Wait()
 				RunService.Heartbeat:Wait()
 			end
-
-			fireproximityprompt(p)
-			task.wait(WARP_OUT_DELAY)
-			HRP.CFrame = old
 		end
+
+		HRP.CFrame = originalCF
+		AutoBuy = wasBuy
 	end
 end)
 
 -- =================================================
--- ============ AUTO BUY (STABILIZED) ==============
+-- ============ AUTO BUY (CACHE MODE) ===============
 -- =================================================
 local BUY_DELAY = 1.2
 local LAST_BUY = 0
@@ -231,8 +226,11 @@ local function GetPrice(obj)
 	local best
 	for _,v in pairs(obj:GetDescendants()) do
 		if v:IsA("TextLabel") or v:IsA("TextButton") then
-			local n = tonumber(v.Text:gsub(",",""):match("%d+"))
-			if n and (not best or n > best) then best = n end
+			local t = v.Text:gsub(",","")
+			local n = tonumber(t:match("%d+"))
+			if n and (not best or n > best) then
+				best = n
+			end
 		end
 	end
 	return best
@@ -241,10 +239,16 @@ end
 local function RefreshPrompts()
 	CachedPrompts = {}
 	for _,p in pairs(workspace:GetDescendants()) do
-		if p:IsA("ProximityPrompt") and (p.ActionText=="Buy!" or p.ActionText=="Purchase") then
-			local part = p.Parent:IsA("BasePart") and p.Parent or p.Parent:FindFirstChildWhichIsA("BasePart")
-			if part and (part.Position-BASE_POSITION).Magnitude<=BASE_RADIUS then
-				table.insert(CachedPrompts,p)
+		if p:IsA("ProximityPrompt") then
+			if p.ActionText ~= "Buy!" and p.ActionText ~= "Purchase" then continue end
+
+			local part =
+				p.Parent:IsA("BasePart") and p.Parent
+				or p.Parent:FindFirstChildWhichIsA("BasePart")
+			if not part then continue end
+
+			if (part.Position - BASE_POSITION).Magnitude <= BASE_RADIUS then
+				table.insert(CachedPrompts, p)
 			end
 		end
 	end
@@ -252,16 +256,24 @@ end
 
 task.spawn(function()
 	while task.wait(8) do
-		if AutoBuy then RefreshPrompts() end
+		if AutoBuy then
+			RefreshPrompts()
+		end
 	end
 end)
 
 task.spawn(function()
 	while task.wait(0.4) do
-		if not AutoBuy or tick()-LAST_BUY<BUY_DELAY then continue end
+		if not AutoBuy then continue end
+		if tick() - LAST_BUY < BUY_DELAY then continue end
 
 		for _,p in pairs(CachedPrompts) do
-			local part = p.Parent and (p.Parent:IsA("BasePart") and p.Parent or p.Parent:FindFirstChildWhichIsA("BasePart"))
+			if not AutoBuy then break end
+			if not p.Parent then continue end
+
+			local part =
+				p.Parent:IsA("BasePart") and p.Parent
+				or p.Parent:FindFirstChildWhichIsA("BasePart")
 			if not part then continue end
 
 			local price = GetPrice(p.Parent)
@@ -269,17 +281,9 @@ task.spawn(function()
 
 			local old = HRP.CFrame
 			HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-
-			task.wait(WARP_IN_DELAY)
-
-			local t0 = tick()
-			while tick()-t0 < LOCK_TIME do
-				HRP.CFrame = part.CFrame * CFrame.new(0,0,-3)
-				RunService.Heartbeat:Wait()
-			end
-
+			RunService.Heartbeat:Wait()
 			fireproximityprompt(p)
-			task.wait(WARP_OUT_DELAY)
+			RunService.Heartbeat:Wait()
 			HRP.CFrame = old
 
 			LAST_BUY = tick()
