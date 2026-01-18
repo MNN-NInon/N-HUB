@@ -1,7 +1,7 @@
 -- =====================================================
 -- N-HUB | My Tycoon Farm
--- AutoCollect + AutoBuy + FLY (WARP MODE)
--- Version : V.1.3.5 (STABLE MERGED)
+-- AutoCollect + AutoBuy + FLY (HOTKEY F)
+-- Version : V.1.3.6 (FINAL)
 -- =====================================================
 
 -- ===== KEY SYSTEM =====
@@ -91,11 +91,6 @@ local BASE_POSITION = HRP.Position
 local BASE_RADIUS = 80
 local COLLECT_DELAY = 60
 
--- ===== WARP =====
-local WARP_IN_DELAY  = 0.35
-local WARP_OUT_DELAY = 0.25
-local LOCK_TIME      = 0.18
-
 -- ===== CLEAR UI =====
 pcall(function()
 	PlayerGui.MainAutoUI:Destroy()
@@ -147,25 +142,16 @@ end
 
 local collectBtn = makeBtn("",40)
 local buyBtn = makeBtn("",72)
+local flyBtn = makeBtn("",104)
+local hideBtn = makeBtn("HIDE / SHOW (G)",136)
 
-local priceBox = Instance.new("TextBox", frame)
-priceBox.Position = UDim2.fromOffset(20,104)
-priceBox.Size = UDim2.fromOffset(190,26)
-priceBox.TextScaled = true
-priceBox.BackgroundColor3 = Color3.fromRGB(30,30,30)
-priceBox.TextColor3 = Color3.new(1,1,1)
-
-local flyBtn = makeBtn("",136)
-local hideBtn = makeBtn("HIDE / SHOW (G)",168)
-
--- ===== UI LOGIC =====
+-- ===== UI UPDATE =====
 local function updateUI()
 	title.Text = MINIMIZED and "N-HUB (MINI)" or "N-HUB | TYCOON"
 	minimizeBtn.Text = MINIMIZED and "+" or "-"
 	collectBtn.Text = AutoCollect and "AUTO COLLECT : ON" or "AUTO COLLECT : OFF"
 	buyBtn.Text = AutoBuy and "AUTO BUY : ON" or "AUTO BUY : OFF"
-	flyBtn.Text = FLYING and "FLY : ON" or "FLY : OFF"
-	priceBox.Text = tostring(MinPrice)
+	flyBtn.Text = FLYING and "FLY : ON (F)" or "FLY : OFF (F)"
 end
 
 local function SetMini(state)
@@ -219,16 +205,6 @@ UIS.InputBegan:Connect(function(i,g)
 	end
 end)
 
-priceBox.FocusLost:Connect(function()
-	local n = tonumber(priceBox.Text)
-	if n then
-		MinPrice = n
-		Config.MinPrice = n
-		SaveConfig()
-	end
-	updateUI()
-end)
-
 -- =====================================================
 -- ================= FLY ===============================
 -- =====================================================
@@ -273,12 +249,20 @@ local function stopFly()
 	updateUI()
 end
 
+-- ===== UI BUTTON =====
 flyBtn.MouseButton1Click:Connect(function()
 	if FLYING then stopFly() else startFly() end
 end)
 
+-- ===== HOTKEY + CONTROL =====
 UIS.InputBegan:Connect(function(i,g)
 	if g then return end
+
+	if i.KeyCode == Enum.KeyCode.F then
+		if FLYING then stopFly() else startFly() end
+		return
+	end
+
 	if i.KeyCode == Enum.KeyCode.W then ctrl.f=1 end
 	if i.KeyCode == Enum.KeyCode.S then ctrl.b=1 end
 	if i.KeyCode == Enum.KeyCode.A then ctrl.l=1 end
