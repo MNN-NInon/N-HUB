@@ -186,22 +186,23 @@ priceBox.FocusLost:Connect(function()
 end)
 
 -- =================================================
--- ============== AUTO COLLECT (WORKING) ===========
+-- ============ AUTO COLLECT (TYCOON FIX) ==========
 -- =================================================
 task.spawn(function()
-	while task.wait(1) do
+	while task.wait(2) do
 		if not AutoCollect then continue end
+		if not HRP then continue end
 
-		for _,p in pairs(workspace:GetDescendants()) do
-			if p:IsA("ProximityPrompt") then
-				local t = (p.ActionText or ""):lower()
-				if t:find("collect") or t:find("claim") or t:find("get") then
-					local part = p.Parent:IsA("BasePart") and p.Parent
-						or p.Parent:FindFirstChildWhichIsA("BasePart")
-
-					if part and (part.Position - HRP.Position).Magnitude <= 15 then
-						fireproximityprompt(p)
+		for _,v in pairs(workspace:GetDescendants()) do
+			if v:IsA("BasePart") then
+				local name = v.Name:lower()
+				if name:find("collector") or name:find("collect") or name:find("cash") then
+					if (v.Position - HRP.Position).Magnitude <= 80 then
+						local old = HRP.CFrame
+						HRP.CFrame = v.CFrame + Vector3.new(0,2,0)
 						task.wait(0.25)
+						HRP.CFrame = old
+						break
 					end
 				end
 			end
