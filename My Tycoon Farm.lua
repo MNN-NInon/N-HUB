@@ -25,13 +25,23 @@ local PlayerGui = LP:WaitForChild("PlayerGui")
 local Char = LP.Character or LP.CharacterAdded:Wait()
 local HRP = Char:WaitForChild("HumanoidRootPart")
 
--- =================================================
--- ================= ANTI AFK =====================
--- =================================================
-LP.Idled:Connect(function()
-	VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-	task.wait(1)
-	VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+-- ================== REAL ANTI AFK ==================
+task.spawn(function()
+	while task.wait(30) do
+		if not LP.Character or not LP.Character:FindFirstChild("Humanoid") then continue end
+
+		local hum = LP.Character.Humanoid
+		local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
+		if not hrp then continue end
+
+		-- ขยับจริงเล็กน้อย
+		hum:Move(Vector3.new(0,0,-1), true)
+		task.wait(0.15)
+		hum:Move(Vector3.new(0,0,1), true)
+
+		-- เปลี่ยน State กัน AFK เชิงลึก
+		hum:ChangeState(Enum.HumanoidStateType.Jumping)
+	end
 end)
 
 -- ===== BASE POSITION =====
