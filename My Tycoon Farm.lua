@@ -244,3 +244,29 @@ task.spawn(function()
 		end
 	end
 end)
+
+-- =================================================
+-- ============ AUTO COLLECT (FIX) =================
+-- =================================================
+
+task.spawn(function()
+	while task.wait(COLLECT_DELAY) do
+		if not AutoCollect then continue end
+
+		for _,v in pairs(workspace:GetDescendants()) do
+			if v:IsA("ProximityPrompt") then
+				local t = v.ActionText:lower()
+				if t:find("collect") or t:find("claim") or t:find("harvest") then
+					local part = v.Parent:IsA("BasePart") and v.Parent
+						or v.Parent:FindFirstChildWhichIsA("BasePart")
+
+					if part and (part.Position - HRP.Position).Magnitude <= BASE_RADIUS then
+						pcall(function()
+							fireproximityprompt(v)
+						end)
+					end
+				end
+			end
+		end
+	end
+end)
