@@ -437,3 +437,155 @@ task.spawn(function()
 		end
 	end
 end)
+
+-- =====================================================
+-- N-HUB | Auto Buy Shop Integrated
+-- ADDON MODULE
+-- =====================================================
+
+repeat task.wait() until game:IsLoaded()
+
+local plr = game.Players.LocalPlayer
+local gui = plr:WaitForChild("PlayerGui")
+
+-- ===== Remote ซื้อ =====
+local buyRemote = game:GetService("ReplicatedStorage")
+    :WaitForChild("Remotes")
+    :WaitForChild("BuyStock")
+
+-- ===== หา Shop UI =====
+local stockUI = gui:WaitForChild("Main")
+    :WaitForChild("Stock")
+
+local scroll1 = stockUI:WaitForChild("ScrollingFrame")
+local scroll2 = scroll1:WaitForChild("ScrollingFrame")
+
+print("N-HUB SHOP LOADED")
+
+-- =====================================================
+-- 🔵 เพิ่ม TAB เข้า UI เดิม N-HUB
+-- =====================================================
+-- ต้องมี Window จาก Core อยู่แล้ว
+
+local ShopTab = Window:CreateTab("Auto Buy Shop")
+
+local selectedItems = {}
+local autoBuyShop = false
+local itemList = {}
+local known = {}
+
+-- =====================================================
+-- 🔘 TOGGLE เปิด / ปิด
+-- =====================================================
+
+ShopTab:CreateToggle({
+    Name = "Auto Buy Shop",
+    CurrentValue = false,
+    Callback = function(val)
+        autoBuyShop = val
+    end
+})
+
+-- =====================================================
+-- 📜 DROPDOWN รายการของ
+-- =====================================================
+
+local dropdown = ShopTab:CreateDropdown({
+    Name = "Select Items",
+    Options = {},
+    CurrentOption = {},
+    MultiSelection = true,
+    Callback = function(options)
+
+        table.clear(selectedItems)
+
+        for _,name in pairs(options) do
+            selectedItems[name] = true
+        end
+
+    end
+})
+
+-- =====================================================
+-- 🔍 ฟังก์ชันสแกนชื่อของ
+-- =====================================================
+
+local function addItem(name)
+
+    if known[name] then return end
+    known[name] = true
+
+    table.insert(itemList, name)
+
+    dropdown:Refresh(itemList, true)
+
+    print("SHOP ITEM :", name)
+end
+
+local function scan(item)
+
+    if item.Name == "Example" then return end
+
+    for _,v in pairs(item:GetDescendants()) do
+        if v:IsA("TextLabel") then
+
+            local text = v.Text
+
+            if text ~= "" then
+                addItem(text)
+                break
+            end
+
+        end
+    end
+end
+
+-- สแกนของที่มีตอนเปิดร้าน
+for _,v in pairs(scroll2:GetChildren()) do
+    scan(v)
+end
+
+-- สแกนของใหม่เวลาเข้า Stock
+scroll2.ChildAdded:Connect(function(v)
+    task.wait(0.5)
+    scan(v)
+end)
+
+-- =====================================================
+-- 🔫 AUTO BUY LOOP
+-- ยิงเฉพาะตอนมีของ
+-- =====================================================
+
+task.spawn(function()
+
+    while task.wait(0.5) do
+
+        if not autoBuyShop then continue end
+
+        for _,item in pairs(scroll2:GetChildren()) do
+
+            if item.Name == "Example" then continue end
+
+            for _,v in pairs(item:GetDescendants()) do
+                if v:IsA("TextLabel") then
+
+                    local name = v.Text
+
+                    if selectedItems[name] then
+
+                        buyRemote:FireServer(name)
+
+                        print("BUY :", name)
+
+                    end
+
+                end
+            end
+
+        end
+
+    end
+
+end)
+
+print("N-HUB V.Shop Integrated Loaded")
