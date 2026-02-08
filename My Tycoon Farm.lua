@@ -1,15 +1,67 @@
 -- =====================================================
+-- N-HUB CORE
+-- Auth Layer 2
+-- =====================================================
+
+print("N-HUB CORE AUTH START")
+
+-- ===== CHECK LOADER TOKEN =====
+if not _G.NHUB_LOADER then
+    warn("❌ DIRECT CORE LOAD DETECTED")
+    return
+end
+
+-- กันรันซ้ำ
+if _G.NHUB_CORE_LOADED then
+    warn("❌ CORE ALREADY LOADED")
+    return
+end
+_G.NHUB_CORE_LOADED = true
+
+-- ===== SERVICES =====
+local Analytics = game:GetService("RbxAnalyticsService")
+
+local function GetHWID()
+    return Analytics:GetClientId()
+end
+
+local PlayerHWID = GetHWID()
+
+-- ===== KEY DATABASE (ต้องตรง Loader) =====
+local KeysDB = {
+
+    ["NONON123"] = {
+        expire = "2027-12-31",
+        hwid = nil
+    },
+
+    ["VIP999"] = {
+        expire = "2027-01-01",
+        hwid = "LOCKED"
+    },
+
+}
+
+-- ===== CHECK KEY =====
+if not _G.KEY then
+    warn("❌ NO KEY (CORE)")
+    return
+end
+
+local KeyData = KeysDB[_G.KEY]
+
+if not KeyData then
+    warn("❌ INVALID KEY (CORE)")
+    return
+end
+
+print("✅ CORE AUTH PASSED")
+
+-- =====================================================
 -- N-HUB | My Tycoon Farm (FIXED VERSION)
 -- AutoCollect + AutoBuy (WARP MODE)
 -- Fixed: Character Respawn Bug
 -- =====================================================
-
--- ===== KEY SYSTEM =====
-local VALID_KEY = "NONON123"
-if not _G.KEY or _G.KEY ~= VALID_KEY then
-	warn("❌ INVALID KEY : กรุณาใส่ _G.KEY = 'NONON123' ก่อนรัน")
-	-- return -- เปิดบรรทัดนี้ถ้าต้องการบังคับใช้คีย์
-end
 
 repeat task.wait() until game:IsLoaded()
 task.wait(1)
