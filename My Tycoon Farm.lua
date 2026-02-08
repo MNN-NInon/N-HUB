@@ -260,6 +260,136 @@ Rayfield:Notify({
 })
 
 -- =====================================================
+-- ================= MUTATION TAB ======================
+-- =====================================================
+
+local MutationTab = Window:CreateTab("Mutation", 4483362458)
+
+-- ===== CONFIG =====
+Config.MutationAutoBuy = Config.MutationAutoBuy or false
+Config.MutationSelected = Config.MutationSelected or {}
+
+local MutationAutoBuy = Config.MutationAutoBuy
+local SelectedMutation = Config.MutationSelected
+
+-- ===== TOGGLE =====
+MutationTab:CreateToggle({
+	Name = "Auto Buy Shop Mutation",
+	CurrentValue = MutationAutoBuy,
+	Callback = function(v)
+		MutationAutoBuy = v
+		Config.MutationAutoBuy = v
+		SaveConfig()
+	end
+})
+
+-- ===== DROPDOWN LIST =====
+local MutationDropdown = MutationTab:CreateDropdown({
+	Name = "Select Mutation To Buy",
+	Options = {},
+	CurrentOption = {},
+	MultipleOptions = true,
+	Callback = function(list)
+		SelectedMutation = {}
+		for _,v in pairs(list) do
+			SelectedMutation[v] = true
+		end
+		Config.MutationSelected = SelectedMutation
+		SaveConfig()
+	end
+})
+
+-- =====================================================
+-- ================= SHOP SCAN =========================
+-- =====================================================
+
+repeat task.wait() until game:IsLoaded()
+
+local plr = game.Players.LocalPlayer
+local gui = plr:WaitForChild("PlayerGui")
+
+local buyRemote = game:GetService("ReplicatedStorage")
+	:WaitForChild("Remotes")
+	:WaitForChild("BuyStock")
+
+local stock = gui:WaitForChild("Main"):WaitForChild("Stock")
+local scroll2 = stock.ScrollingFrame.ScrollingFrame
+
+local KnownMutations = {}
+
+-- ===== CHECK STOCK =====
+local function hasStock(itemFrame)
+	for _,v in pairs(itemFrame:GetDescendants()) do
+		if v:IsA("TextLabel") then
+			local text = v.Text
+			if string.find(text,"Stock") then
+				local num = string.match(text,"%d+")
+				if num and tonumber(num) > 0 then
+					return true
+				end
+			end
+		end
+	end
+	return false
+end
+
+-- ===== SCAN ITEM =====
+local function scan(item)
+
+	if item.Name == "Example" then return end
+
+	local title = item:FindFirstChild("Title", true)
+	if not title then return end
+
+	local name = title.Text
+	if KnownMutations[name] then return end
+
+	KnownMutations[name] = item
+
+	-- อัปเดตรายชื่อใน Dropdown
+	local list = {}
+	for n,_ in pairs(KnownMutations) do
+		table.insert(list,n)
+	end
+
+	MutationDropdown:Refresh(list,true)
+end
+
+-- Scan ครั้งแรก
+for _,v in pairs(scroll2:GetChildren()) do
+	scan(v)
+end
+
+-- Scan เพิ่มตอนของเข้า
+scroll2.ChildAdded:Connect(function(v)
+	task.wait(0.5)
+	scan(v)
+end)
+
+-- =====================================================
+-- ================= AUTO BUY LOOP =====================
+-- =====================================================
+
+task.spawn(function()
+	while task.wait(1) do
+
+		if not MutationAutoBuy then continue end
+
+		for name,_ in pairs(SelectedMutation) do
+
+			local itemFrame = KnownMutations[name]
+
+			if itemFrame and hasStock(itemFrame) then
+				buyRemote:FireServer(name)
+				print("BUY MUTATION :", name)
+			end
+
+		end
+
+	end
+end)
+
+-- =====================================================
 -- ============ AUTO BUY (STABILIZED) ==================
 -- =====================================================
 local BUY_DELAY = 0.7
