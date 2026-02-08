@@ -1,13 +1,13 @@
 -- =====================================================
 -- N-HUB CORE
--- Auth Layer 2
+-- Single Source Auth
 -- =====================================================
 
 print("N-HUB CORE AUTH START")
 
 -- ===== CHECK LOADER TOKEN =====
 if not _G.NHUB_LOADER then
-    warn("❌ DIRECT CORE LOAD DETECTED")
+    warn("❌ DIRECT LOAD BLOCKED")
     return
 end
 
@@ -27,7 +27,10 @@ end
 
 local PlayerHWID = GetHWID()
 
--- ===== KEY DATABASE (ต้องตรง Loader) =====
+-- =====================================================
+-- 🔑 KEY DATABASE (แหล่งเดียว)
+-- =====================================================
+
 local KeysDB = {
 
     ["NONON123"] = {
@@ -42,20 +45,58 @@ local KeysDB = {
 
 }
 
--- ===== CHECK KEY =====
+-- =====================================================
+-- 🔍 AUTH CHECK
+-- =====================================================
+
 if not _G.KEY then
-    warn("❌ NO KEY (CORE)")
+    warn("❌ NO KEY")
     return
 end
 
 local KeyData = KeysDB[_G.KEY]
 
 if not KeyData then
-    warn("❌ INVALID KEY (CORE)")
+    warn("❌ INVALID KEY")
     return
 end
 
-print("✅ CORE AUTH PASSED")
+-- ===== EXPIRE CHECK =====
+local function IsExpired(dateStr)
+    local y,m,d = dateStr:match("(%d+)%-(%d+)%-(%d+)")
+    y,m,d = tonumber(y),tonumber(m),tonumber(d)
+
+    local expireTime = os.time({
+        year = y,
+        month = m,
+        day = d
+    })
+
+    return os.time() > expireTime
+end
+
+if IsExpired(KeyData.expire) then
+    warn("❌ KEY EXPIRED")
+    return
+end
+
+-- ===== HWID LOCK =====
+if KeyData.hwid == "LOCKED" then
+    KeysDB[_G.KEY].hwid = PlayerHWID
+    print("🔒 HWID LOCKED :", PlayerHWID)
+
+elseif KeyData.hwid and KeyData.hwid ~= PlayerHWID then
+    warn("❌ HWID MISMATCH")
+    return
+end
+
+print("✅ AUTH PASSED")
+
+-- =====================================================
+-- 🚀 LOAD SCRIPT MAIN
+-- =====================================================
+
+print("LOADING MAIN SCRIPT...")
 
 -- =====================================================
 -- N-HUB | My Tycoon Farm (FIXED VERSION)
