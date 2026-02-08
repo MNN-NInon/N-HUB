@@ -44,51 +44,105 @@ end
 -- =====================================================
 -- =============== CONFIG SYSTEM =======================
 -- =====================================================
+
 local CONFIG_FILE = "N-HUB_MyTycoonFarm_Config.json"
 
-local Config = {
+-- ===== DEFAULT CONFIG =====
+local DefaultConfig = {
+
 	AutoCollect = true,
 	AutoBuy = false,
 	MinPrice = 250,
+
 	UI_VISIBLE = true,
 	MINIMIZED = false,
+
 	Fly = false,
-	AntiAFK = true
+	AntiAFK = true,
+
+	-- Mutation
+	MutationAutoBuy = false,
+	MutationSelected = {}
+
 }
 
+-- ===== RUNTIME VALUES =====
+local Config = table.clone(DefaultConfig)
+
+local AutoCollect
+local AutoBuy
+local MinPrice
+local UI_VISIBLE
+local MINIMIZED
+local FlyEnabled
+local AntiAFK
+
+local MutationAutoBuy
+local SelectedMutation
+
+-- ===== LOAD CONFIG =====
 local function LoadConfig()
-	if isfile(CONFIG_FILE) then
-		local ok, data = pcall(function()
-			return HttpService:JSONDecode(readfile(CONFIG_FILE))
-		end)
-		if ok and type(data) == "table" then
-			for k,v in pairs(Config) do
-				if data[k] ~= nil then
-					Config[k] = data[k]
-				end
-			end
+
+	-- ไม่มีไฟล์ → สร้างใหม่
+	if not isfile(CONFIG_FILE) then
+		writefile(CONFIG_FILE, HttpService:JSONEncode(DefaultConfig))
+	end
+
+	local ok, data = pcall(function()
+		return HttpService:JSONDecode(readfile(CONFIG_FILE))
+	end)
+
+	if ok and type(data) == "table" then
+		for k,v in pairs(DefaultConfig) do
+			Config[k] = (data[k] ~= nil) and data[k] or v
 		end
 	end
+
+	-- APPLY → Runtime
+	AutoCollect = Config.AutoCollect
+	AutoBuy     = Config.AutoBuy
+	MinPrice    = Config.MinPrice
+
+	UI_VISIBLE  = Config.UI_VISIBLE
+	MINIMIZED   = Config.MINIMIZED
+
+	FlyEnabled  = Config.Fly
+	AntiAFK     = Config.AntiAFK
+
+	MutationAutoBuy = Config.MutationAutoBuy
+	SelectedMutation = table.clone(Config.MutationSelected or {})
+
+	getgenv().MinPrice = MinPrice
 end
 
+-- ===== SYNC CONFIG =====
+local function SyncConfig()
+
+	Config.AutoCollect = AutoCollect
+	Config.AutoBuy     = AutoBuy
+	Config.MinPrice    = MinPrice
+
+	Config.UI_VISIBLE  = UI_VISIBLE
+	Config.MINIMIZED   = MINIMIZED
+
+	Config.Fly         = FlyEnabled
+	Config.AntiAFK     = AntiAFK
+
+	Config.MutationAutoBuy = MutationAutoBuy
+	Config.MutationSelected = SelectedMutation
+
+end
+
+-- ===== SAVE CONFIG =====
 local function SaveConfig()
+	SyncConfig()
+
 	pcall(function()
 		writefile(CONFIG_FILE, HttpService:JSONEncode(Config))
 	end)
 end
 
 LoadConfig()
-
--- ===== APPLY CONFIG =====
-local AutoCollect = Config.AutoCollect
-local AutoBuy     = Config.AutoBuy
-local UI_VISIBLE  = Config.UI_VISIBLE
-local MINIMIZED   = Config.MINIMIZED
-local MinPrice    = Config.MinPrice
-local FlyEnabled  = Config.Fly
-local AntiAFK = Config.AntiAFK
-
-getgenv().MinPrice = MinPrice
 
 -- ===== BASE POSITION (Updated to be safer) =====
 -- แนะนำให้ผู้เล่นยืนที่ Tycoon ก่อนรัน
@@ -308,12 +362,14 @@ Rayfield:Notify({
 
 local MutationTab = Window:CreateTab("Mutation", 4483362458)
 
--- ===== CONFIG =====
-Config.MutationAutoBuy = Config.MutationAutoBuy or false
-Config.MutationSelected = Config.MutationSelected or {}
-
-local MutationAutoBuy = Config.MutationAutoBuy
-local SelectedMutation = Config.MutationSelected
+-- ===== TABLE → LIST (Dropdown Default Fix) =====
+local function TableToList(tab)
+	local list = {}
+	for name,_ in pairs(tab) do
+		table.insert(list,name)
+	end
+	return list
+end
 
 -- ===== TOGGLE =====
 MutationTab:CreateToggle({
@@ -330,7 +386,7 @@ MutationTab:CreateToggle({
 local MutationDropdown = MutationTab:CreateDropdown({
 	Name = "Select Mutation To Buy",
 	Options = {},
-	CurrentOption = {},
+	CurrentOption = TableToList(SelectedMutation),
 	MultipleOptions = true,
 	Callback = function(list)
 		SelectedMutation = {}
