@@ -377,3 +377,19 @@ task.spawn(function()
 		end
 	end
 end)
+
+end)
+
+-- ================= HOTKEY FLY =================
+UIS.InputBegan:Connect(function(i,g)
+	if g then return end
+
+	if i.KeyCode == Enum.KeyCode.F then
+		if FlyEnabled then
+			StopFly()
+		else
+			StartFly()
+		end
+	end
+end)
+
