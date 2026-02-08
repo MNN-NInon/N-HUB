@@ -119,6 +119,67 @@ pcall(function()
 	end
 end)
 
+-- ===== FLY SYSTEM (FIXED) =====
+local FlyBV, FlyBG
+local FlySpeed = 60
+
+local function StopFly()
+	FlyEnabled = false
+	Config.Fly = false
+	SaveConfig()
+	
+	if FlyBV then FlyBV:Destroy(); FlyBV = nil end
+	if FlyBG then FlyBG:Destroy(); FlyBG = nil end
+	
+	local hum = getHum()
+	if hum then hum.PlatformStand = false end
+end
+
+local function StartFly()
+	if FlyBV then StopFly() end -- Reset if exists
+	local hum = getHum()
+	local root = getRoot()
+	if not hum or not root then return end
+
+	FlyEnabled = true
+	Config.Fly = true
+	SaveConfig()
+
+	FlyBV = Instance.new("BodyVelocity")
+	FlyBV.MaxForce = Vector3.new(9e9,9e9,9e9)
+	FlyBV.Parent = root
+
+	FlyBG = Instance.new("BodyGyro")
+	FlyBG.MaxTorque = Vector3.new(9e9,9e9,9e9)
+	FlyBG.P = 9e4
+	FlyBG.Parent = root
+
+	hum.PlatformStand = true
+
+	task.spawn(function()
+		while FlyEnabled and FlyBV and FlyBV.Parent do
+			local root = getRoot()
+			if not root then break end
+			
+			local cam = workspace.CurrentCamera
+			local move = Vector3.zero
+
+			if UIS:IsKeyDown(Enum.KeyCode.W) then move += cam.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.S) then move -= cam.CFrame.LookVector end
+			if UIS:IsKeyDown(Enum.KeyCode.A) then move -= cam.CFrame.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.D) then move += cam.CFrame.RightVector end
+			if UIS:IsKeyDown(Enum.KeyCode.Space) then move += cam.CFrame.UpVector end
+			if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then move -= cam.CFrame.UpVector end
+
+			FlyBV.Velocity = move.Magnitude > 0 and move.Unit * FlySpeed or Vector3.zero
+			FlyBG.CFrame = cam.CFrame
+			RunService.RenderStepped:Wait()
+		end
+		-- ถ้าลูปหลุดให้เคลียร์ค่า
+		StopFly()
+	end)
+end
+
 -- =====================================================
 -- ================= RAYFIELD UI =======================
 -- =====================================================
