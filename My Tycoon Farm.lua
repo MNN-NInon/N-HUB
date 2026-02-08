@@ -445,13 +445,35 @@ local function scan(item)
 
 	KnownMutations[name] = item
 
-	-- อัปเดตรายชื่อใน Dropdown
 	local list = {}
 	for n,_ in pairs(KnownMutations) do
 		table.insert(list,n)
 	end
 
 	MutationDropdown:Refresh(list,true)
+
+	-- ===== RE-APPLY =====
+	task.defer(function()
+
+		local selectedList = TableToList(SelectedMutation)
+
+		if #selectedList > 0 then
+			MutationDropdown:Set(selectedList)
+		end
+
+	end)
+
+	-- ===== 🔥 SMOOTH FIX (เสริมโคตรเนียน) =====
+	task.delay(1,function()
+
+		local selectedList = TableToList(SelectedMutation)
+
+		if #selectedList > 0 then
+			MutationDropdown:Set(selectedList)
+		end
+
+	end)
+
 end
 
 -- Scan ครั้งแรก
