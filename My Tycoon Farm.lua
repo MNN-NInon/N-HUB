@@ -392,4 +392,3 @@ UIS.InputBegan:Connect(function(i,g)
 		end
 	end
 end)
-
