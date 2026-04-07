@@ -701,6 +701,98 @@ task.spawn(function()
 end)
 
 -- =====================================================
+-- ================= CRAFTING TAB ======================
+-- =====================================================
+
+local CraftTab = Window:CreateTab("Crafting", 4483362458)
+
+local CraftRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Craft")
+-- หมายเหตุ: ถ้าปุ่ม Claim ใช้ Remote คนละตัว ให้แก้ตรงนี้ (ปกติมักจะเป็นชื่อ "Claim")
+local ClaimRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):FindFirstChild("Claim") 
+
+local CraftingUI = PlayerGui:WaitForChild("Main"):WaitForChild("CraftingFrame"):WaitForChild("ScrollingFrame"):WaitForChild("ScrollingFrame")
+
+-- ===== TOGGLE =====
+CraftTab:CreateToggle({
+	Name = "Auto Craft & Claim",
+	CurrentValue = Config.AutoCraft,
+	Callback = function(v)
+		Config.AutoCraft = v
+		SaveConfig()
+	end
+})
+
+-- ===== DROPDOWN =====
+local CraftDropdown = CraftTab:CreateDropdown({
+	Name = "Select Item to Craft",
+	Options = {"None"},
+	CurrentOption = {Config.CraftTarget},
+	MultipleOptions = false,
+	Callback = function(selected)
+		Config.CraftTarget = selected[1]
+		SaveConfig()
+	end
+})
+
+-- =====================================================
+-- ================= SCAN & AUTO LOOP ==================
+-- =====================================================
+
+local KnownCraftItems = {}
+
+-- ฟังก์ชันดึงชื่อไอเทมจาก UI มาใส่ใน Dropdown
+local function RefreshCraftList()
+	local list = {"None"}
+	for _, v in pairs(CraftingUI:GetChildren()) do
+		local title = v:FindFirstChild("Title", true)
+		if title and title:IsA("TextLabel") and tonumber(v.Name) then
+			table.insert(list, title.Text)
+			KnownCraftItems[title.Text] = v
+		end
+	end
+	CraftDropdown:Refresh(list, true)
+end
+
+-- สแกนครั้งแรก
+task.spawn(function()
+	task.wait(2)
+	RefreshCraftList()
+end)
+
+-- ===== LOOP ทำงานอัตโนมัติ =====
+task.spawn(function()
+	while task.wait(1.5) do -- หน่วงเวลา 1.5 วิ เพื่อความปลอดภัย
+		if not Config.AutoCraft or Config.CraftTarget == "None" then continue end
+		
+		local itemFrame = KnownCraftItems[Config.CraftTarget]
+		if not itemFrame then continue end
+
+		pcall(function()
+			local progress = itemFrame:FindFirstChild("CraftProgress")
+			if progress then
+				-- เช็คว่าปุ่ม Claim เด้งขึ้นมาหรือยัง (อ้างอิงจากไฟล์ txt ที่คุณส่งมา)
+				local claimBtn = progress:FindFirstChild("Claim", true)
+				
+				if claimBtn and claimBtn.Visible then
+					-- ถ้าปุ่ม Claim โชว์ ให้กดรับของ
+					if ClaimRemote then
+						ClaimRemote:FireServer(Config.CraftTarget)
+					else
+						-- ถ้าหา Remote Claim ไม่เจอ ให้ลองใช้ Craft Remote (บางเกมใช้ตัวเดียวกัน)
+						CraftRemote:FireServer(Config.CraftTarget)
+					end
+					print("✅ Claimed:", Config.CraftTarget)
+				elseif not progress.Visible or progress:FindFirstChild("Time") == nil then
+					-- ถ้าไม่ได้คราฟอยู่ ให้สั่งคราฟ
+					CraftRemote:FireServer(Config.CraftTarget)
+					print("🔨 Crafting:", Config.CraftTarget)
+				end
+			end
+		end)
+	end
+end)
+
+-- =====================================================
 -- ============== AUTO COLLECT =========================
 -- =====================================================
 task.spawn(function()
