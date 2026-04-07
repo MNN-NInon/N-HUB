@@ -7,14 +7,14 @@ print("N-HUB CORE AUTH START")
 
 -- ===== CHECK LOADER TOKEN =====
 if not _G.NHUB_LOADER then
-    warn("❌ DIRECT LOAD BLOCKED")
-    return
+    warn("❌ DIRECT LOAD BLOCKED")
+    return
 end
 
 -- กันรันซ้ำ
 if _G.NHUB_CORE_LOADED then
-    warn("❌ CORE ALREADY LOADED")
-    return
+    warn("❌ CORE ALREADY LOADED")
+    return
 end
 _G.NHUB_CORE_LOADED = true
 
@@ -22,7 +22,7 @@ _G.NHUB_CORE_LOADED = true
 local Analytics = game:GetService("RbxAnalyticsService")
 
 local function GetHWID()
-    return Analytics:GetClientId()
+    return Analytics:GetClientId()
 end
 
 local PlayerHWID = GetHWID()
@@ -33,15 +33,15 @@ local PlayerHWID = GetHWID()
 
 local KeysDB = {
 
-    ["NONON123"] = {
-        expire = "2027-12-31",
-        hwid = nil
-    },
+    ["NONON123"] = {
+        expire = "2027-12-31",
+        hwid = nil
+    },
 
-    ["VIP999"] = {
-        expire = "2027-01-01",
-        hwid = "LOCKED"
-    },
+    ["VIP999"] = {
+        expire = "2027-01-01",
+        hwid = "LOCKED"
+    },
 
 }
 
@@ -50,44 +50,44 @@ local KeysDB = {
 -- =====================================================
 
 if not _G.KEY then
-    warn("❌ NO KEY")
-    return
+    warn("❌ NO KEY")
+    return
 end
 
 local KeyData = KeysDB[_G.KEY]
 
 if not KeyData then
-    warn("❌ INVALID KEY")
-    return
+    warn("❌ INVALID KEY")
+    return
 end
 
 -- ===== EXPIRE CHECK =====
 local function IsExpired(dateStr)
-    local y,m,d = dateStr:match("(%d+)%-(%d+)%-(%d+)")
-    y,m,d = tonumber(y),tonumber(m),tonumber(d)
+    local y,m,d = dateStr:match("(%d+)%-(%d+)%-(%d+)")
+    y,m,d = tonumber(y),tonumber(m),tonumber(d)
 
-    local expireTime = os.time({
-        year = y,
-        month = m,
-        day = d
-    })
+    local expireTime = os.time({
+        year = y,
+        month = m,
+        day = d
+    })
 
-    return os.time() > expireTime
+    return os.time() > expireTime
 end
 
 if IsExpired(KeyData.expire) then
-    warn("❌ KEY EXPIRED")
-    return
+    warn("❌ KEY EXPIRED")
+    return
 end
 
 -- ===== HWID LOCK =====
 if KeyData.hwid == "LOCKED" then
-    KeysDB[_G.KEY].hwid = PlayerHWID
-    print("🔒 HWID LOCKED :", PlayerHWID)
+    KeysDB[_G.KEY].hwid = PlayerHWID
+    print("🔒 HWID LOCKED :", PlayerHWID)
 
 elseif KeyData.hwid and KeyData.hwid ~= PlayerHWID then
-    warn("❌ HWID MISMATCH")
-    return
+    warn("❌ HWID MISMATCH")
+    return
 end
 
 print("✅ AUTH PASSED")
@@ -143,7 +143,6 @@ local CONFIG_FILE = "N-HUB_MyTycoonFarm_Config.json"
 -- ===== DEFAULT CONFIG =====
 local DefaultConfig = {
 
-	
 	AutoCollect = true,
 	AutoBuy = false,
 	MinPrice = 250,
@@ -157,9 +156,6 @@ local DefaultConfig = {
 	-- Mutation
 	MutationAutoBuy = false,
 	MutationSelected = {}
-	
-    AutoCraft = false,
-	CraftTarget = "None"
 
 }
 
@@ -197,21 +193,17 @@ local function LoadConfig()
 
 	-- APPLY → Runtime
 	AutoCollect = Config.AutoCollect
-	AutoBuy     = Config.AutoBuy
-	MinPrice    = Config.MinPrice
+	AutoBuy     = Config.AutoBuy
+	MinPrice    = Config.MinPrice
 
-	UI_VISIBLE  = Config.UI_VISIBLE
-	MINIMIZED   = Config.MINIMIZED
+	UI_VISIBLE  = Config.UI_VISIBLE
+	MINIMIZED   = Config.MINIMIZED
 
-	FlyEnabled  = Config.Fly
-	AntiAFK     = Config.AntiAFK
+	FlyEnabled  = Config.Fly
+	AntiAFK     = Config.AntiAFK
 
 	MutationAutoBuy = Config.MutationAutoBuy
 	SelectedMutation = table.clone(Config.MutationSelected or {})
-	
-	-- [เพิ่มตรงนี้]
-	AutoCraft = Config.AutoCraft
-	CraftTarget = Config.CraftTarget
 
 	getgenv().MinPrice = MinPrice
 end
@@ -220,21 +212,17 @@ end
 local function SyncConfig()
 
 	Config.AutoCollect = AutoCollect
-	Config.AutoBuy     = AutoBuy
-	Config.MinPrice    = MinPrice
+	Config.AutoBuy     = AutoBuy
+	Config.MinPrice    = MinPrice
 
-	Config.UI_VISIBLE  = UI_VISIBLE
-	Config.MINIMIZED   = MINIMIZED
+	Config.UI_VISIBLE  = UI_VISIBLE
+	Config.MINIMIZED   = MINIMIZED
 
-	Config.Fly         = FlyEnabled
-	Config.AntiAFK     = AntiAFK
+	Config.Fly         = FlyEnabled
+	Config.AntiAFK     = AntiAFK
 
 	Config.MutationAutoBuy = MutationAutoBuy
 	Config.MutationSelected = SelectedMutation
-	
-	-- [เพิ่มตรงนี้]
-	Config.AutoCraft = AutoCraft
-	Config.CraftTarget = CraftTarget
 
 end
 
@@ -259,9 +247,9 @@ local COLLECT_DELAY = 60
 local BASE_RADIUS = 100 -- เพิ่มระยะเล็กน้อย
 
 -- ===== WARP STABILIZER =====
-local WARP_IN_DELAY  = 0.35
+local WARP_IN_DELAY  = 0.35
 local WARP_OUT_DELAY = 0.25
-local LOCK_TIME      = 0.18
+local LOCK_TIME      = 0.18
 
 -- ===== CLEAR UI =====
 pcall(function()
@@ -432,40 +420,40 @@ local AntiAFK_Status = "Active"
 
 -- Loop กันเตะ
 task.spawn(function()
-    while task.wait(55) do  -- ทุก 55 วิ แทน 60
-        if not AntiAFK then continue end
+    while task.wait(55) do  -- ทุก 55 วิ แทน 60
+        if not AntiAFK then continue end
 
-        pcall(function()
-            -- Method 1: VirtualUser
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton2(Vector2.new())
-            VirtualUser:ClickButton1(Vector2.new())
+        pcall(function()
+            -- Method 1: VirtualUser
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+            VirtualUser:ClickButton1(Vector2.new())
 
-            -- Method 2: จำลอง character movement (สำคัญมาก)
-            local root = getRoot()
-            local hum = getHum()
-            if root and hum then
-                local orig = root.CFrame
-                -- กระตุกเล็กน้อย
-                hum:Move(Vector3.new(0.1, 0, 0))
-                task.wait(0.1)
-                hum:Move(Vector3.new(0, 0, 0))
-            end
+            -- Method 2: จำลอง character movement (สำคัญมาก)
+            local root = getRoot()
+            local hum = getHum()
+            if root and hum then
+                local orig = root.CFrame
+                -- กระตุกเล็กน้อย
+                hum:Move(Vector3.new(0.1, 0, 0))
+                task.wait(0.1)
+                hum:Move(Vector3.new(0, 0, 0))
+            end
 
-            -- Method 3: Camera nudge
-            local cam = workspace.CurrentCamera
-            local origCF = cam.CFrame
-            cam.CFrame = origCF * CFrame.Angles(0, math.rad(0.01), 0)
-            task.wait(0.05)
-            cam.CFrame = origCF
-        end)
+            -- Method 3: Camera nudge
+            local cam = workspace.CurrentCamera
+            local origCF = cam.CFrame
+            cam.CFrame = origCF * CFrame.Angles(0, math.rad(0.01), 0)
+            task.wait(0.05)
+            cam.CFrame = origCF
+        end)
 
-        Rayfield:Notify({
-            Title = "N-HUB Anti-AFK",
-            Content = "Prevented AFK Kick",
-            Duration = 3
-        })
-    end
+        Rayfield:Notify({
+            Title = "N-HUB Anti-AFK",
+            Content = "Prevented AFK Kick",
+            Duration = 3
+        })
+    end
 end)
 
 -- ================= NOTIFY =================
@@ -629,88 +617,6 @@ task.spawn(function()
 
 	end
 end)
-
--- =====================================================
--- ================= CRAFTING TAB ======================
--- =====================================================
-
-local CraftTab = Window:CreateTab("Crafting", 4483362458)
-local CraftRemote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("Craft")
-local CraftingUI = PlayerGui:WaitForChild("Main"):WaitForChild("CraftingFrame"):WaitForChild("ScrollingFrame"):WaitForChild("ScrollingFrame")
-
--- ===== TOGGLE =====
-CraftTab:CreateToggle({
-	Name = "Auto Craft & Claim",
-	CurrentValue = AutoCraft,
-	Callback = function(v)
-		AutoCraft = v
-		SaveConfig()
-	end
-})
-
--- ===== DROPDOWN =====
-local CraftDropdown = CraftTab:CreateDropdown({
-	Name = "Select Item to Craft",
-	Options = {"None"},
-	CurrentOption = {CraftTarget},
-	MultipleOptions = false,
-	Callback = function(selected)
-		CraftTarget = selected[1]
-		SaveConfig()
-	end
-})
-
--- =====================================================
--- ================= SCAN & AUTO LOOP ==================
--- =====================================================
-
-local KnownCraftItems = {}
-
-local function RefreshCraftList()
-	local list = {"None"}
-	for _, v in pairs(CraftingUI:GetChildren()) do
-		local title = v:FindFirstChild("Title", true)
-		if title and title:IsA("TextLabel") and tonumber(v.Name) then
-			table.insert(list, title.Text)
-			KnownCraftItems[title.Text] = v
-		end
-	end
-	CraftDropdown:Refresh(list, true)
-end
-
--- สแกนชื่อของคราฟครั้งแรก
-task.spawn(function()
-	task.wait(2)
-	RefreshCraftList()
-end)
-
--- ===== LOOP อัตโนมัติ =====
-task.spawn(function()
-	while task.wait(1.5) do
-		if not AutoCraft or CraftTarget == "None" then continue end
-		
-		local itemFrame = KnownCraftItems[CraftTarget]
-		if not itemFrame then continue end
-
-		pcall(function()
-			local progress = itemFrame:FindFirstChild("CraftProgress")
-			if progress then
-				local claimBtn = progress:FindFirstChild("Claim", true)
-				
-				-- เช็คว่าปุ่ม Claim โชว์หรือยัง
-				if claimBtn and (claimBtn.Visible or (claimBtn:IsA("TextLabel") and claimBtn.Text == "Claim")) then
-					CraftRemote:FireServer(CraftTarget)
-					print("✅ Claimed:", CraftTarget)
-				elseif not progress.Visible then
-					-- ถ้า UI Progress ไม่โชว์ แสดงว่ายังไม่ได้เริ่มคราฟ
-					CraftRemote:FireServer(CraftTarget)
-					print("🔨 Crafting:", CraftTarget)
-				end
-			end
-		end)
-	end
-end)
-
 
 -- =====================================================
 -- ============ AUTO BUY (STABILIZED) ==================
