@@ -420,25 +420,40 @@ local AntiAFK_Status = "Active"
 
 -- Loop กันเตะ
 task.spawn(function()
-	while task.wait(60) do
-		if not AntiAFK then continue end
-		
-		pcall(function()
-			VirtualUser:CaptureController()
-			VirtualUser:ClickButton2(Vector2.new(0,0))
-		end)
+    while task.wait(55) do  -- ทุก 55 วิ แทน 60
+        if not AntiAFK then continue end
 
-		AntiAFK_Status = "Blocked Kick"
-		
-		Rayfield:Notify({
-			Title = "N-HUB Anti-AFK",
-			Content = "Prevented AFK Kick",
-			Duration = 3
-		})
+        pcall(function()
+            -- Method 1: VirtualUser
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+            VirtualUser:ClickButton1(Vector2.new())
 
-		task.wait(2)
-		AntiAFK_Status = "Active"
-	end
+            -- Method 2: จำลอง character movement (สำคัญมาก)
+            local root = getRoot()
+            local hum = getHum()
+            if root and hum then
+                local orig = root.CFrame
+                -- กระตุกเล็กน้อย
+                hum:Move(Vector3.new(0.1, 0, 0))
+                task.wait(0.1)
+                hum:Move(Vector3.new(0, 0, 0))
+            end
+
+            -- Method 3: Camera nudge
+            local cam = workspace.CurrentCamera
+            local origCF = cam.CFrame
+            cam.CFrame = origCF * CFrame.Angles(0, math.rad(0.01), 0)
+            task.wait(0.05)
+            cam.CFrame = origCF
+        end)
+
+        Rayfield:Notify({
+            Title = "N-HUB Anti-AFK",
+            Content = "Prevented AFK Kick",
+            Duration = 3
+        })
+    end
 end)
 
 -- ================= NOTIFY =================
